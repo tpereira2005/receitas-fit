@@ -98,6 +98,7 @@ enum FoodCategory: String, CaseIterable, Identifiable, Codable {
     var assetName: String? {
         switch self {
         case .protein: "glyph.drumstick"
+        case .dairy: "glyph.milk"
         case .grains: "glyph.wheat"
         case .fruit: "glyph.apple"
         default: nil

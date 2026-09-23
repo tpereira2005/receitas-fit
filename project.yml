@@ -6,6 +6,10 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
+  # O XcodeGen ainda não conhece os ficheiros do Icon Composer (.icon); corrige o tipo depois de gerar.
+  postGenCommand: >-
+    /usr/bin/perl -0pi -e 's/lastKnownFileType = [\w.]+; (name = AppIcon\.icon; )?path = AppIcon\.icon;/lastKnownFileType = folder.iconcomposer.icon; $1path = AppIcon.icon;/g'
+    ReceitasFit.xcodeproj/project.pbxproj
 
 settings:
   base:
@@ -21,6 +25,9 @@ targets:
     platform: iOS
     sources:
       - path: ReceitasFit
+      # Ícone da app no formato Icon Composer (Liquid Glass, modos escuro, transparente e matizado).
+      - path: AppIcon.icon
+        buildPhase: resources
     info:
       path: Support/Info.plist
       properties:

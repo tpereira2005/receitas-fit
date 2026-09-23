@@ -60,7 +60,7 @@ struct FeaturedRecipeCard: View {
     var body: some View {
         Color.clear
             .frame(width: 290, height: 200)
-            .overlay { RecipePhoto(recipe: recipe, symbolSize: 56) }
+            .overlay { RecipePhoto(recipe: recipe, variant: .full, symbolSize: 56) }
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(recipe.category.title.uppercased())

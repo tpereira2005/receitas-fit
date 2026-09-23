@@ -132,7 +132,7 @@ struct RecipeDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(recipe.category.title, systemImage: recipe.category.symbol)
+            RecipeCategoryLabel(category: recipe.category)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(recipe.category.color)
                 .padding(.horizontal, 10)

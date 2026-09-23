@@ -69,11 +69,18 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     SectionHeader(title: selectedCategory?.title ?? "Todas as receitas", trailing: Format.recipes(filtered.count))
                     if filtered.isEmpty {
-                        ContentUnavailableView(
-                            "Nada por aqui",
-                            systemImage: selectedCategory?.symbol ?? "fork.knife",
-                            description: Text("Ainda não tens receitas nesta categoria.")
-                        )
+                        ContentUnavailableView {
+                            Label {
+                                Text("Nada por aqui")
+                            } icon: {
+                                (selectedCategory?.glyph ?? Image(systemName: "fork.knife"))
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 44, height: 44)
+                            }
+                        } description: {
+                            Text("Ainda não tens receitas nesta categoria.")
+                        }
                         .padding(.top, 20)
                     } else {
                         RecipeGrid(recipes: filtered, namespace: namespace)
@@ -134,9 +141,9 @@ struct CategoryChips: View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
-                    chip(title: "Todas", symbol: "square.stack.fill", value: nil)
-                    ForEach(RecipeCategory.homeOrder) { category in
-                        chip(title: category.title, symbol: category.symbol, value: category)
+                    chip(title: "Todas", icon: GlyphImage(image: Image(systemName: "square.stack.fill"), isAsset: false), value: nil)
+                    ForEach(RecipeCategory.allCases) { category in
+                        chip(title: category.title, icon: GlyphImage(image: category.glyph, isAsset: category.assetName != nil), value: category)
                     }
                 }
             }
@@ -145,12 +152,12 @@ struct CategoryChips: View {
         .scrollClipDisabled()
     }
 
-    private func chip(title: String, symbol: String, value: RecipeCategory?) -> some View {
+    private func chip(title: String, icon: GlyphImage, value: RecipeCategory?) -> some View {
         let isSelected = selection == value
         return Button {
             withAnimation(.snappy) { selection = value }
         } label: {
-            Label(title, systemImage: symbol)
+            Label { Text(title) } icon: { icon }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
                 .padding(.horizontal, 14)

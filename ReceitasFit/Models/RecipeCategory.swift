@@ -1,12 +1,10 @@
 import SwiftUI
 
 enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
-    case breakfast, lunch, dinner, snack, dessert, iceCream, drink, other
+    // A ordem dos casos define a ordem em toda a app (filtros, Explorar e editor).
+    case snack, iceCream, breakfast, lunch, dinner, dessert, drink, other
 
     var id: String { rawValue }
-
-    /// Ordem dos filtros na página Receitas.
-    static let homeOrder: [RecipeCategory] = [.snack, .iceCream, .breakfast, .lunch, .dinner, .dessert, .drink, .other]
 
     var title: String {
         switch self {
@@ -32,6 +30,18 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
         case .drink: "takeoutbag.and.cup.and.straw.fill"
         case .other: "square.grid.2x2.fill"
         }
+    }
+
+    /// Ícone desenhado para a app (quando não há um SF Symbol adequado).
+    var assetName: String? {
+        switch self {
+        case .snack: "glyph.snack"
+        default: nil
+        }
+    }
+
+    var glyph: Image {
+        assetName.map { Image($0) } ?? Image(systemName: symbol)
     }
 
     var color: Color {

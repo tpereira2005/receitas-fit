@@ -34,11 +34,23 @@ struct RecipePlaceholder: View {
     let category: RecipeCategory
     var symbolSize: CGFloat = 40
 
+    @ViewBuilder
+    private var glyph: some View {
+        if category.assetName != nil {
+            category.glyph
+                .resizable()
+                .scaledToFit()
+                .frame(width: symbolSize * 1.2, height: symbolSize * 1.2)
+        } else {
+            category.glyph
+                .font(.system(size: symbolSize, weight: .semibold))
+        }
+    }
+
     var body: some View {
         ZStack {
             Rectangle().fill(category.color.gradient)
-            Image(systemName: category.symbol)
-                .font(.system(size: symbolSize, weight: .semibold))
+            glyph
                 .foregroundStyle(.white.opacity(0.9))
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
         }

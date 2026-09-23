@@ -214,26 +214,49 @@ struct FoodIcon: View {
     }
 }
 
+/// Ícone ao lado de texto: SF Symbol ou ícone desenhado para a app, com o mesmo tamanho visual.
+struct GlyphImage: View {
+    let image: Image
+    let isAsset: Bool
+
+    /// Os ícones desenhados acompanham o tamanho do texto, como os SF Symbols.
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 18
+
+    var body: some View {
+        if isAsset {
+            image
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            image
+        }
+    }
+}
+
 /// Etiqueta com o nome e o ícone de uma categoria de alimentos.
 struct FoodCategoryLabel: View {
     let category: FoodCategory
     var short = true
 
-    /// Os ícones desenhados para a app acompanham o tamanho do texto, como os SF Symbols.
-    @ScaledMetric(relativeTo: .body) private var glyphSize: CGFloat = 18
-
     var body: some View {
         Label {
             Text(short ? category.shortTitle : category.title)
         } icon: {
-            if category.assetName != nil {
-                category.glyph
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: glyphSize, height: glyphSize)
-            } else {
-                category.glyph
-            }
+            GlyphImage(image: category.glyph, isAsset: category.assetName != nil)
+        }
+    }
+}
+
+/// Etiqueta com o nome e o ícone de uma categoria de receitas.
+struct RecipeCategoryLabel: View {
+    let category: RecipeCategory
+
+    var body: some View {
+        Label {
+            Text(category.title)
+        } icon: {
+            GlyphImage(image: category.glyph, isAsset: category.assetName != nil)
         }
     }
 }

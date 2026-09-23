@@ -101,7 +101,7 @@ struct RecipeEditorView: View {
                     .frame(height: 220)
                     .frame(maxWidth: .infinity)
                     .overlay {
-                        if let data = draft.thumbnailData ?? draft.photoData, let image = UIImage(data: data) {
+                        if let data = draft.photoData ?? draft.thumbnailData, let image = UIImage(data: data) {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFill()
@@ -150,7 +150,7 @@ struct RecipeEditorView: View {
                 .lineLimit(1...4)
             Picker("Categoria", selection: $draft.category) {
                 ForEach(RecipeCategory.allCases) { category in
-                    Label(category.title, systemImage: category.symbol).tag(category)
+                    RecipeCategoryLabel(category: category).tag(category)
                 }
             }
         }
