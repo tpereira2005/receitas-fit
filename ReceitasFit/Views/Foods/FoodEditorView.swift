@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct FoodEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -19,6 +21,10 @@ struct FoodEditorView: View {
     @State private var draft: FoodDraft
     @State private var confirmDiscard = false
     @State private var pendingReview: PendingReview?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var importingImage = false
+    @State private var isProcessingImage = false
+    @State private var imageError: String?
 
     init(food: Food?, onSave: ((Food) -> Void)? = nil) {
         self.food = food
@@ -50,10 +56,12 @@ struct FoodEditorView: View {
                     TextField("Marca (opcional)", text: $draft.brand)
                     Picker("Categoria", selection: $draft.category) {
                         ForEach(FoodCategory.allCases) { category in
-                            Label(category.shortTitle, systemImage: category.symbol).tag(category)
+                            FoodCategoryLabel(category: category).tag(category)
                         }
                     }
                 }
+
+                imageSection
 
                 Section {
                     Picker("Valores", selection: $draft.base) {
@@ -115,6 +123,33 @@ struct FoodEditorView: View {
                 Button("Descartar", role: .destructive) { dismiss() }
                 Button("Continuar a editar", role: .cancel) {}
             }
+            .onChange(of: photoItem) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        await setImage(from: data)
+                    }
+                    photoItem = nil
+                }
+            }
+            .fileImporter(isPresented: $importingImage, allowedContentTypes: [.image]) { result in
+                guard case .success(let url) = result else { return }
+                let hasAccess = url.startAccessingSecurityScopedResource()
+                defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
+                if let data = try? Data(contentsOf: url) {
+                    Task { await setImage(from: data) }
+                } else {
+                    imageError = "Não foi possível abrir este ficheiro."
+                }
+            }
+            .alert(
+                "Imagem",
+                isPresented: Binding(get: { imageError != nil }, set: { if !$0 { imageError = nil } })
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(imageError ?? "")
+            }
             .navigationDestination(item: $pendingReview) { review in
                 if let food {
                     FoodUpdateReviewView(food: food, recipes: review.recipes, changes: review.changes) {
@@ -122,6 +157,54 @@ struct FoodEditorView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var imageSection: some View {
+        Section {
+            HStack(spacing: 16) {
+                FoodIcon(category: draft.category, imageData: draft.imageData, size: 64)
+                    .overlay {
+                        if isProcessingImage {
+                            ProgressView()
+                        }
+                    }
+                VStack(alignment: .leading, spacing: 10) {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label(draft.imageData == nil ? "Escolher das Fotos" : "Trocar pelas Fotos", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        importingImage = true
+                    } label: {
+                        Label("Escolher dos Ficheiros", systemImage: "folder")
+                    }
+                    if draft.imageData != nil {
+                        Button("Remover imagem", systemImage: "trash", role: .destructive) {
+                            withAnimation { draft.imageData = nil }
+                        }
+                    }
+                }
+                .buttonStyle(.borderless)
+                .font(.subheadline)
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Imagem")
+        } footer: {
+            Text("Opcional. Usa uma imagem quadrada, de preferência em PNG com fundo transparente. Quando existe, substitui o ícone da categoria.")
+        }
+    }
+
+    private func setImage(from data: Data) async {
+        isProcessingImage = true
+        let processed = await Task.detached(priority: .userInitiated) {
+            ImageProcessing.foodImage(from: data)
+        }.value
+        isProcessingImage = false
+        if let processed {
+            withAnimation { draft.imageData = processed }
+        } else {
+            imageError = "Este formato de imagem não é suportado."
         }
     }
 

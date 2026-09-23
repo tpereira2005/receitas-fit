@@ -5,6 +5,9 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
 
     var id: String { rawValue }
 
+    /// Ordem dos filtros na página Receitas.
+    static let homeOrder: [RecipeCategory] = [.snack, .iceCream, .breakfast, .lunch, .dinner, .dessert, .drink, .other]
+
     var title: String {
         switch self {
         case .breakfast: "Pequeno-almoço"
@@ -120,13 +123,14 @@ enum RecipeFilter: Hashable {
 }
 
 enum RecipeSort: String, CaseIterable, Identifiable {
-    case newest, name, calories, protein, time
+    case newest, oldest, name, calories, protein, time
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .newest: "Mais recentes"
+        case .oldest: "Mais antigas"
         case .name: "Nome"
         case .calories: "Menos calorias"
         case .protein: "Mais proteína"
@@ -137,6 +141,7 @@ enum RecipeSort: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .newest: "clock"
+        case .oldest: "clock.arrow.circlepath"
         case .name: "textformat"
         case .calories: "flame"
         case .protein: "bolt"
@@ -147,6 +152,7 @@ enum RecipeSort: String, CaseIterable, Identifiable {
     func sorted(_ recipes: [Recipe]) -> [Recipe] {
         switch self {
         case .newest: recipes.sorted { $0.createdAt > $1.createdAt }
+        case .oldest: recipes.sorted { $0.createdAt < $1.createdAt }
         case .name: recipes.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         case .calories: recipes.sorted { $0.calories < $1.calories }
         case .protein: recipes.sorted { $0.protein > $1.protein }

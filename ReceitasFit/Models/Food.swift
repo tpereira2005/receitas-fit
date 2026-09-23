@@ -94,6 +94,21 @@ enum FoodCategory: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Ícone desenhado para a app (quando não há um SF Symbol adequado).
+    var assetName: String? {
+        switch self {
+        case .protein: "glyph.drumstick"
+        case .grains: "glyph.wheat"
+        case .fruit: "glyph.apple"
+        default: nil
+        }
+    }
+
+    /// Ícone da categoria: desenhado para a app ou SF Symbol.
+    var glyph: Image {
+        assetName.map { Image($0) } ?? Image(systemName: symbol)
+    }
+
     var color: Color {
         switch self {
         case .protein: .red
@@ -158,6 +173,8 @@ final class Food {
     var measureBaseRaw: String = MeasureBase.grams.rawValue
     /// Peso (g ou ml) de uma unidade, p. ex. 1 ovo ≈ 60 g. Opcional.
     var unitWeight: Double?
+    /// Imagem personalizada (PNG), usada no lugar do ícone da categoria.
+    @Attribute(.externalStorage) var imageData: Data?
 
     // Valores por 100 g ou 100 ml
     var calories: Double = 0
@@ -237,6 +254,7 @@ struct FoodDraft: Equatable {
     var base: MeasureBase = .grams
     var unitWeight: Double?
     var facts = NutritionFacts()
+    var imageData: Data?
 
     init() {}
 
@@ -247,6 +265,7 @@ struct FoodDraft: Equatable {
         base = food.measureBase
         unitWeight = food.unitWeight
         facts = food.per100
+        imageData = food.imageData
     }
 
     var isValid: Bool { !name.trimmed.isEmpty }
@@ -287,6 +306,9 @@ struct FoodDraft: Equatable {
         food.brand = brand.trimmed
         food.category = category
         food.measureBase = base
+        if food.imageData != imageData {
+            food.imageData = imageData
+        }
         if let unitWeight, unitWeight > 0 {
             food.unitWeight = unitWeight
         } else {

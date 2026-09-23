@@ -45,7 +45,7 @@ struct IngredientPickerView: View {
                                 }
                             }
                         } header: {
-                            Label(category.shortTitle, systemImage: category.symbol)
+                            FoodCategoryLabel(category: category)
                         }
                     }
                 }
@@ -144,7 +144,7 @@ struct IngredientQuantityView: View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    FoodIcon(category: food.category, size: 44)
+                    FoodIcon(food: food, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(food.name).font(.headline)
                         Text("\(Int(food.calories.rounded())) kcal · \(food.macroSummary) por \(food.measureBase.short)")

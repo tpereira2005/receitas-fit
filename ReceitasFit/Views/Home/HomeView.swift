@@ -135,7 +135,7 @@ struct CategoryChips: View {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     chip(title: "Todas", symbol: "square.stack.fill", value: nil)
-                    ForEach(RecipeCategory.allCases) { category in
+                    ForEach(RecipeCategory.homeOrder) { category in
                         chip(title: category.title, symbol: category.symbol, value: category)
                     }
                 }

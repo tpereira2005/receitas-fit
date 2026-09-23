@@ -159,17 +159,72 @@ struct IntegerFieldRow: View {
     }
 }
 
-/// Ícone quadrado com a cor da categoria do alimento.
+/// Ícone de um alimento: a imagem personalizada, se existir, ou o ícone da categoria.
 struct FoodIcon: View {
     let category: FoodCategory
+    var imageData: Data?
+    var imageKey: String?
     var size: CGFloat = 32
 
+    init(category: FoodCategory, imageData: Data? = nil, imageKey: String? = nil, size: CGFloat = 32) {
+        self.category = category
+        self.imageData = imageData
+        self.imageKey = imageKey
+        self.size = size
+    }
+
+    init(food: Food, size: CGFloat = 32) {
+        self.init(
+            category: food.category,
+            imageData: food.imageData,
+            imageKey: "food-\(food.id.uuidString)-\(food.updatedAt.timeIntervalSince1970)",
+            size: size
+        )
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+    }
+
+    private var customImage: UIImage? {
+        guard let imageData else { return nil }
+        if let imageKey { return ImageCache.shared.image(for: imageKey, data: imageData) }
+        return UIImage(data: imageData)
+    }
+
     var body: some View {
-        Image(systemName: category.symbol)
-            .font(.system(size: size * 0.45, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(category.color.gradient, in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+        if let customImage {
+            // Imagens com fundo transparente ficam sobre um tom suave da categoria.
+            Image(uiImage: customImage)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .background(category.color.opacity(0.14))
+                .clipShape(shape)
+        } else {
+            category.glyph
+                .resizable()
+                .scaledToFit()
+                .fontWeight(.semibold)
+                .frame(width: size * 0.5, height: size * 0.5)
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(category.color.gradient, in: shape)
+        }
+    }
+}
+
+/// Etiqueta com o nome e o ícone de uma categoria de alimentos.
+struct FoodCategoryLabel: View {
+    let category: FoodCategory
+    var short = true
+
+    var body: some View {
+        Label {
+            Text(short ? category.shortTitle : category.title)
+        } icon: {
+            category.glyph
+        }
     }
 }
 
@@ -178,7 +233,7 @@ struct FoodRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FoodIcon(category: food.category)
+            FoodIcon(food: food)
             VStack(alignment: .leading, spacing: 2) {
                 Text(food.name)
                     .font(.body.weight(.medium))

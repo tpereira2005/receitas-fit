@@ -434,7 +434,7 @@ private struct EditorIngredientRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if let food {
-                FoodIcon(category: food.category, size: 30)
+                FoodIcon(food: food, size: 30)
             } else if ingredient.snapshot != nil {
                 FoodIcon(category: .other, size: 30)
             } else {

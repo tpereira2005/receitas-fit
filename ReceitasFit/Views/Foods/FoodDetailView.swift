@@ -77,10 +77,9 @@ struct FoodDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Editar") { showingEditor = true }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button("Editar", systemImage: "pencil") { showingEditor = true }
+                    Divider()
                     Button("Apagar alimento", systemImage: "trash", role: .destructive) { confirmDelete = true }
                 } label: {
                     Label("Mais", systemImage: "ellipsis")
@@ -113,7 +112,7 @@ struct FoodDetailView: View {
 
     private var header: some View {
         HStack(spacing: 16) {
-            FoodIcon(category: food.category, size: 60)
+            FoodIcon(food: food, size: 60)
             VStack(alignment: .leading, spacing: 4) {
                 Text(food.name)
                     .font(.title2.bold())

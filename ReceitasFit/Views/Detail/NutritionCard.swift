@@ -90,8 +90,8 @@ struct NutritionCard: View {
                 }
 
                 HStack(spacing: 10) {
-                    MiniStat(title: "Fibra", value: "\(facts.fiber.cleanString) g", symbol: "leaf.fill", color: .green)
-                    MiniStat(title: "Sal", value: "\(facts.salt.formatted(.number.precision(.fractionLength(0...2)))) g", symbol: "circle.grid.3x3.fill", color: .gray)
+                    MiniStat(title: "Fibra", value: "\(facts.fiber.cleanString) g", icon: Image(systemName: "leaf.fill"), color: .green)
+                    MiniStat(title: "Sal", value: "\(facts.salt.formatted(.number.precision(.fractionLength(0...2)))) g", icon: Image("glyph.saltshaker"), color: .secondary)
                 }
             }
 
@@ -148,13 +148,16 @@ private struct MacroRow: View {
 private struct MiniStat: View {
     let title: String
     let value: String
-    let symbol: String
+    let icon: Image
     let color: Color
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.caption.weight(.bold))
+            icon
+                .resizable()
+                .scaledToFit()
+                .fontWeight(.bold)
+                .frame(width: 14, height: 14)
                 .foregroundStyle(color)
             Text(title)
                 .font(.subheadline)

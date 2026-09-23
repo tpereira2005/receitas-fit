@@ -63,6 +63,8 @@ struct FoodDTO: Codable {
     var unitWeight: Double?
     var per100: NutritionFacts
     var createdAt: Date
+    /// Ausente em cópias anteriores à versão 1.1.5.
+    var imageData: Data?
 
     init(food: Food) {
         id = food.id
@@ -73,6 +75,7 @@ struct FoodDTO: Codable {
         unitWeight = food.unitWeight
         per100 = food.per100
         createdAt = food.createdAt
+        imageData = food.imageData
     }
 
     func makeFood() -> Food {
@@ -84,6 +87,7 @@ struct FoodDTO: Codable {
         food.unitWeight = unitWeight
         food.per100 = per100
         food.createdAt = createdAt
+        food.imageData = imageData
         return food
     }
 }

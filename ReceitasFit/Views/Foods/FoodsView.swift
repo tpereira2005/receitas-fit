@@ -79,7 +79,7 @@ struct FoodsView: View {
                             }
                         }
                     } header: {
-                        Label(category.shortTitle, systemImage: category.symbol)
+                        FoodCategoryLabel(category: category)
                     }
                 }
             }

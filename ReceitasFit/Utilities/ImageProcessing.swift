@@ -15,6 +15,11 @@ enum ImageProcessing {
         return Output(photo: photo, thumbnail: thumbnail)
     }
 
+    /// Imagem de um alimento: quadrada o suficiente para ícones, guardada em PNG para manter a transparência.
+    static func foodImage(from data: Data) -> Data? {
+        UIImage(data: data)?.resized(maxDimension: 512).pngData()
+    }
+
     static func thumbnail(from data: Data) -> Data? {
         UIImage(data: data)?.resized(maxDimension: 800).jpegData(compressionQuality: 0.78)
     }
