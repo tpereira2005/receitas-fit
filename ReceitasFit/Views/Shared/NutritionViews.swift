@@ -219,11 +219,21 @@ struct FoodCategoryLabel: View {
     let category: FoodCategory
     var short = true
 
+    /// Os ícones desenhados para a app acompanham o tamanho do texto, como os SF Symbols.
+    @ScaledMetric(relativeTo: .body) private var glyphSize: CGFloat = 18
+
     var body: some View {
         Label {
             Text(short ? category.shortTitle : category.title)
         } icon: {
-            category.glyph
+            if category.assetName != nil {
+                category.glyph
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: glyphSize, height: glyphSize)
+            } else {
+                category.glyph
+            }
         }
     }
 }
