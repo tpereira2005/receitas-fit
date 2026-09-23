@@ -1,0 +1,175 @@
+import SwiftUI
+import SwiftData
+
+struct HomeView: View {
+    enum EditorMode: String, Identifiable {
+        case write, importText
+        var id: String { rawValue }
+    }
+
+    @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
+    @AppStorage("homeSort") private var sort: RecipeSort = .newest
+    @State private var selectedCategory: RecipeCategory?
+    @State private var path = NavigationPath()
+    @State private var editorMode: EditorMode?
+    @State private var showingSettings = false
+    @Namespace private var namespace
+
+    private var filtered: [Recipe] {
+        sort.sorted(recipes.filter { selectedCategory == nil || $0.category == selectedCategory })
+    }
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            Group {
+                if recipes.isEmpty {
+                    emptyState
+                } else {
+                    content
+                }
+            }
+            .navigationTitle("Receitas")
+            .toolbar { toolbarContent }
+            .recipeDestinations(namespace)
+            .sheet(item: $editorMode) { mode in
+                RecipeEditorView(startWithImport: mode == .importText)
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+            }
+            .onAppear(perform: handleScreenshotArguments)
+        }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 26) {
+                if selectedCategory == nil && recipes.count >= 4 {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionHeader(title: "Recentes")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 14) {
+                                ForEach(recipes.prefix(6)) { recipe in
+                                    let route = RecipeRoute(recipe: recipe, source: "featured")
+                                    NavigationLink(value: route) {
+                                        FeaturedRecipeCard(recipe: recipe, transitionID: route.transitionID, namespace: namespace)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .scrollTargetLayout()
+                        }
+                        .contentMargins(.horizontal, 16, for: .scrollContent)
+                        .scrollTargetBehavior(.viewAligned)
+                        .scrollClipDisabled()
+                    }
+                }
+
+                CategoryChips(selection: $selectedCategory)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    SectionHeader(title: selectedCategory?.title ?? "Todas as receitas", trailing: Format.recipes(filtered.count))
+                    if filtered.isEmpty {
+                        ContentUnavailableView(
+                            "Nada por aqui",
+                            systemImage: selectedCategory?.symbol ?? "fork.knife",
+                            description: Text("Ainda não tens receitas nesta categoria.")
+                        )
+                        .padding(.top, 20)
+                    } else {
+                        RecipeGrid(recipes: filtered, namespace: namespace)
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("Ainda sem receitas", systemImage: "fork.knife")
+        } description: {
+            Text("Guarda aqui as receitas que crias ou encontras nas redes sociais.")
+        } actions: {
+            Button("Nova receita", systemImage: "plus") { editorMode = .write }
+                .buttonStyle(.glassProminent)
+            Button("Importar de texto", systemImage: "text.viewfinder") { editorMode = .importText }
+                .buttonStyle(.glass)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button("Definições", systemImage: "gearshape") { showingSettings = true }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Picker("Ordenar por", selection: $sort) {
+                    ForEach(RecipeSort.allCases) { option in
+                        Label(option.title, systemImage: option.symbol).tag(option)
+                    }
+                }
+            } label: {
+                Label("Ordenar", systemImage: "arrow.up.arrow.down")
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button("Escrever receita", systemImage: "square.and.pencil") { editorMode = .write }
+                Button("Importar texto ou captura", systemImage: "text.viewfinder") { editorMode = .importText }
+            } label: {
+                Label("Adicionar", systemImage: "plus")
+            } primaryAction: {
+                editorMode = .write
+            }
+        }
+    }
+
+    private func handleScreenshotArguments() {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "screenshotOpenFirst"), path.isEmpty, let first = filtered.first {
+            path.append(RecipeRoute(recipe: first))
+        }
+        if defaults.bool(forKey: "screenshotEditor"), editorMode == nil {
+            editorMode = .write
+        }
+    }
+}
+
+struct CategoryChips: View {
+    @Binding var selection: RecipeCategory?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    chip(title: "Todas", symbol: "square.stack.fill", value: nil)
+                    ForEach(RecipeCategory.allCases) { category in
+                        chip(title: category.title, symbol: category.symbol, value: category)
+                    }
+                }
+            }
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .scrollClipDisabled()
+    }
+
+    private func chip(title: String, symbol: String, value: RecipeCategory?) -> some View {
+        let isSelected = selection == value
+        return Button {
+            withAnimation(.snappy) { selection = value }
+        } label: {
+            Label(title, systemImage: symbol)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(
+            isSelected ? .regular.tint(value?.color ?? Color.accentColor).interactive() : .regular.interactive(),
+            in: .capsule
+        )
+    }
+}

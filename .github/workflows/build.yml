@@ -1,0 +1,147 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+env:
+  SCHEME: ReceitasFit
+  BUNDLE_ID: com.tpereira.receitasfit
+
+jobs:
+  ipa:
+    name: IPA para o SideStore
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Selecionar Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Gerar projeto Xcode
+        run: |
+          brew install xcodegen xcbeautify
+          xcodegen generate
+
+      - name: Compilar (sem assinatura)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project ReceitasFit.xcodeproj \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | xcbeautify --renderer github-actions
+
+      - name: Criar IPA
+        run: |
+          mkdir -p Payload
+          cp -R "build/Build/Products/Release-iphoneos/$SCHEME.app" Payload/
+          zip -qry "$SCHEME.ipa" Payload
+          ls -lh "$SCHEME.ipa"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ReceitasFit-ipa
+          path: ReceitasFit.ipa
+
+      - name: Publicar na release "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest "$SCHEME.ipa" \
+            --title "Receitas · build ${{ github.run_number }}" \
+            --notes "Build automática de ${{ github.sha }}. Abre esta página no iPhone, descarrega o ReceitasFit.ipa e instala-o com o SideStore." \
+            --target "${{ github.sha }}" \
+            --latest
+
+  screenshots:
+    name: Capturas do simulador
+    needs: ipa
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Selecionar Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Gerar projeto Xcode
+        run: |
+          brew install xcodegen xcbeautify
+          xcodegen generate
+
+      - name: Escolher simulador
+        run: |
+          DEVICES=$(xcrun simctl list devices available -j)
+          UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | test("^iPhone [0-9]+ Pro$"))] | last | .udid // empty')
+          if [ -z "$UDID" ]; then
+            UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | startswith("iPhone"))] | last | .udid')
+          fi
+          xcrun simctl list devices | grep "$UDID"
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Compilar para o simulador
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project ReceitasFit.xcodeproj \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -destination "id=$UDID" \
+            -derivedDataPath build \
+            | xcbeautify --renderer github-actions
+
+      - name: Tirar capturas
+        run: |
+          APP="build/Build/Products/Debug-iphonesimulator/$SCHEME.app"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularMode active --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+
+          shot() {
+            local name="$1"; shift
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" -AppleLanguages "(pt-PT)" -AppleLocale pt_PT "$@"
+            sleep 8
+            xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
+          }
+
+          shot 1-inicio
+          shot 2-receita -screenshotOpenFirst YES
+          shot 3-pesquisa -tab search -screenshotSearch frango
+          shot 4-explorar -tab explore
+          shot 5-favoritas -tab favorites
+          shot 6-editor -screenshotEditor YES
+          xcrun simctl ui "$UDID" appearance dark
+          shot 7-inicio-escuro
+          shot 8-receita-escuro -screenshotOpenFirst YES
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+
+      - name: Anexar capturas à release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload latest screenshots/*.png --clobber
