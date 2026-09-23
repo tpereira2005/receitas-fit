@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "display-p3:0.36000,0.86000,0.52000,1.00000",
-          "display-p3:0.05000,0.60000,0.36000,1.00000"
+          "display-p3:0.20000,0.78000,0.46000,1.00000",
+          "display-p3:0.02000,0.50000,0.31000,1.00000"
         ],
         "orientation": {
           "start": {
@@ -13,7 +13,7 @@
           },
           "stop": {
             "x": 0.5,
-            "y": 0.85
+            "y": 0.9
           }
         }
       }
@@ -30,13 +30,13 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "display-p3:0.86000,0.97000,0.90000,1.00000"
+                "solid": "display-p3:0.94000,0.99000,0.95000,1.00000"
               }
             },
             {
               "appearance": "dark",
               "value": {
-                "solid": "display-p3:0.78000,0.90000,0.83000,1.00000"
+                "solid": "display-p3:0.84000,0.92000,0.87000,1.00000"
               }
             }
           ],
@@ -45,7 +45,7 @@
           "image-name": "bowl-rim.svg",
           "name": "bowl-rim",
           "position": {
-            "scale": 1,
+            "scale": 1.07,
             "translation-in-points": [
               0,
               0
@@ -71,7 +71,7 @@
           "image-name": "bowl.svg",
           "name": "bowl",
           "position": {
-            "scale": 1,
+            "scale": 1.07,
             "translation-in-points": [
               0,
               0
@@ -97,8 +97,8 @@
             {
               "value": {
                 "linear-gradient": [
-                  "display-p3:0.90000,1.00000,0.93000,1.00000",
-                  "display-p3:0.70000,0.96000,0.80000,1.00000"
+                  "display-p3:0.88000,0.98000,0.50000,1.00000",
+                  "display-p3:0.52000,0.87000,0.36000,1.00000"
                 ],
                 "orientation": {
                   "start": {
@@ -137,7 +137,7 @@
           "image-name": "leaves.svg",
           "name": "leaves",
           "position": {
-            "scale": 1,
+            "scale": 1.07,
             "translation-in-points": [
               0,
               0
@@ -148,12 +148,12 @@
       "lighting": "combined",
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.4
+        "opacity": 0.45
       },
       "specular": true,
       "translucency": {
         "enabled": true,
-        "value": 0.45
+        "value": 0.25
       }
     }
   ],

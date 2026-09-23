@@ -82,12 +82,13 @@ def srgb(r, g, b, a=1.0):
     return f"srgb:{r:.5f},{g:.5f},{b:.5f},{a:.5f}"
 
 
+# Esmeralda profundo, para as folhas lima e a taça branca sobressaírem.
 BACKGROUND_LIGHT = {
-    "linear-gradient": [p3(0.36, 0.86, 0.52), p3(0.05, 0.60, 0.36)],
-    "orientation": {"start": {"x": 0.5, "y": 0}, "stop": {"x": 0.5, "y": 0.85}},
+    "linear-gradient": [p3(0.20, 0.78, 0.46), p3(0.02, 0.50, 0.31)],
+    "orientation": {"start": {"x": 0.5, "y": 0}, "stop": {"x": 0.5, "y": 0.9}},
 }
 LEAVES_LIGHT = {
-    "linear-gradient": [p3(0.90, 1.00, 0.93), p3(0.70, 0.96, 0.80)],
+    "linear-gradient": [p3(0.88, 0.98, 0.50), p3(0.52, 0.87, 0.36)],
     "orientation": {"start": {"x": 0.5, "y": 0}, "stop": {"x": 0.5, "y": 1}},
 }
 LEAVES_DARK = {
@@ -96,8 +97,12 @@ LEAVES_DARK = {
 }
 BOWL_LIGHT = {"solid": srgb(1, 1, 1)}
 BOWL_DARK = {"solid": srgb(0.93, 0.96, 0.94)}
-RIM_LIGHT = {"solid": p3(0.86, 0.97, 0.90)}
-RIM_DARK = {"solid": p3(0.78, 0.90, 0.83)}
+RIM_LIGHT = {"solid": p3(0.94, 0.99, 0.95)}
+RIM_DARK = {"solid": p3(0.84, 0.92, 0.87)}
+
+
+# Tamanho do motivo em relação à grelha de 1024 (as camadas escalam a partir do centro).
+MOTIF_SCALE = 1.07
 
 
 def layer(name, light, dark):
@@ -110,7 +115,7 @@ def layer(name, light, dark):
         "hidden": False,
         "image-name": f"{name}.svg",
         "name": name,
-        "position": {"scale": 1, "translation-in-points": [0, 0]},
+        "position": {"scale": MOTIF_SCALE, "translation-in-points": [0, 0]},
     }
 
 
@@ -132,7 +137,7 @@ icon = {
     # O primeiro grupo fica à frente.
     "groups": [
         group([layer("bowl-rim", RIM_LIGHT, RIM_DARK), layer("bowl", BOWL_LIGHT, BOWL_DARK)], 0.2, 0.55),
-        group([layer("leaves", LEAVES_LIGHT, LEAVES_DARK)], 0.45, 0.4),
+        group([layer("leaves", LEAVES_LIGHT, LEAVES_DARK)], 0.25, 0.45),
     ],
     "supported-platforms": {"circles": ["watchOS"], "squares": "shared"},
 }
