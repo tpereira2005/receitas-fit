@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - '**.md'
-      - 'design/*.png'
+      - 'design/**'
   workflow_dispatch:
 
 permissions:
