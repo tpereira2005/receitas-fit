@@ -90,7 +90,7 @@ private struct CategoryTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            GlyphImage(image: category.glyph, isAsset: category.assetName != nil)
+            GlyphImage(image: category.glyph, isAsset: category.assetName != nil, size: 26)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)

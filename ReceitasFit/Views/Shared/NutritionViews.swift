@@ -220,14 +220,22 @@ struct GlyphImage: View {
     let isAsset: Bool
 
     /// Os ícones desenhados acompanham o tamanho do texto, como os SF Symbols.
-    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 18
+    @ScaledMetric(relativeTo: .body) private var scaledSize: CGFloat = 18
+    /// Tamanho fixo para contextos com ícones maiores (p. ex. os círculos de Explorar).
+    private let fixedSize: CGFloat?
+
+    init(image: Image, isAsset: Bool, size: CGFloat? = nil) {
+        self.image = image
+        self.isAsset = isAsset
+        self.fixedSize = size
+    }
 
     var body: some View {
         if isAsset {
             image
                 .resizable()
                 .scaledToFit()
-                .frame(width: size, height: size)
+                .frame(width: fixedSize ?? scaledSize, height: fixedSize ?? scaledSize)
         } else {
             image
         }
