@@ -7,43 +7,56 @@ struct MacroValue: Identifiable {
     let grams: Double
     let kcalPerGram: Double
     let color: Color
+    var detail: String?
 
     var kcal: Double { grams * kcalPerGram }
 }
 
 struct NutritionCard: View {
-    let recipe: Recipe
+    let perServing: NutritionFacts
+    let servings: Int
+    var note: String?
+
+    @State private var showsWholeRecipe = false
+
+    private var facts: NutritionFacts {
+        showsWholeRecipe ? perServing.scaled(by: Double(max(1, servings))) : perServing
+    }
 
     private var macros: [MacroValue] {
         [
-            MacroValue(id: "protein", name: "Proteína", grams: recipe.protein, kcalPerGram: 4, color: .pink),
-            MacroValue(id: "carbs", name: "Hidratos", grams: recipe.carbs, kcalPerGram: 4, color: .orange),
-            MacroValue(id: "fat", name: "Gordura", grams: recipe.fat, kcalPerGram: 9, color: .teal),
+            MacroValue(id: "protein", name: "Proteína", grams: facts.protein, kcalPerGram: 4, color: .pink),
+            MacroValue(id: "carbs", name: "Hidratos", grams: facts.carbs, kcalPerGram: 4, color: .orange,
+                       detail: "açúcares \(facts.sugars.cleanString) g"),
+            MacroValue(id: "fat", name: "Gordura", grams: facts.fat, kcalPerGram: 9, color: .teal,
+                       detail: "saturada \(facts.saturatedFat.cleanString) g"),
         ]
     }
 
     private var macroCalories: Double { macros.reduce(0) { $0 + $1.kcal } }
-    private var hasMacros: Bool { macroCalories > 0 }
-    private var displayCalories: Double { recipe.calories > 0 ? recipe.calories : macroCalories }
+    private var displayCalories: Double { facts.calories > 0 ? facts.calories : macroCalories }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Text("Nutrição").font(.title2.bold())
                 Spacer()
-                Text("por porção")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Picker("Valores", selection: $showsWholeRecipe.animation(.snappy)) {
+                    Text("Porção").tag(false)
+                    Text("Receita").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 168)
             }
 
-            if displayCalories == 0 && !hasMacros {
-                Label("Ainda sem informação nutricional. Edita a receita para adicionar calorias e macros.", systemImage: "chart.pie")
+            if perServing.isEmpty {
+                Label("Ainda sem informação nutricional. Edita a receita e adiciona ingredientes da biblioteca.", systemImage: "chart.pie")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 22) {
                     ZStack {
-                        if hasMacros {
+                        if macroCalories > 0 {
                             Chart(macros) { macro in
                                 SectorMark(
                                     angle: .value("kcal", macro.kcal),
@@ -61,6 +74,7 @@ struct NutritionCard: View {
                             Text(Int(displayCalories.rounded()), format: .number)
                                 .font(.title2.bold())
                                 .fontDesign(.rounded)
+                                .contentTransition(.numericText())
                             Text("kcal")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -75,11 +89,21 @@ struct NutritionCard: View {
                     }
                 }
 
-                if recipe.fiber > 0 {
-                    Label("Fibra: \(recipe.fiber.cleanString) g", systemImage: "leaf.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.green)
+                HStack(spacing: 10) {
+                    MiniStat(title: "Fibra", value: "\(facts.fiber.cleanString) g", symbol: "leaf.fill", color: .green)
+                    MiniStat(title: "Sal", value: "\(facts.salt.formatted(.number.precision(.fractionLength(0...2)))) g", symbol: "circle.grid.3x3.fill", color: .gray)
                 }
+            }
+
+            Text(showsWholeRecipe ? "Receita toda · \(Format.servings(servings))" : "Por porção · a receita rende \(Format.servings(servings))")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+
+            if let note {
+                Label(note, systemImage: "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(20)
@@ -92,14 +116,15 @@ private struct MacroRow: View {
     let share: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
                 Circle().fill(macro.color).frame(width: 8, height: 8)
                 Text(macro.name).font(.subheadline)
                 Spacer()
                 Text("\(macro.grams.cleanString) g")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                    .contentTransition(.numericText())
             }
             GeometryReader { geo in
                 Capsule()
@@ -111,6 +136,38 @@ private struct MacroRow: View {
                     }
             }
             .frame(height: 6)
+            if let detail = macro.detail {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+}
+
+private struct MiniStat: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: symbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
+            Text(title)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

@@ -5,48 +5,57 @@ import PhotosUI
 struct RecipeEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query private var foods: [Food]
 
     private let recipe: Recipe?
-    private let startWithImport: Bool
     private let original: RecipeDraft
 
     @State private var draft: RecipeDraft
     @State private var photoItem: PhotosPickerItem?
     @State private var isLoadingPhoto = false
-    @State private var showingImport = false
     @State private var confirmDiscard = false
-    @State private var quickIngredient = ""
+    @State private var showingPicker = false
+    @State private var editingIngredient: Ingredient?
     @State private var newTag = ""
-    @FocusState private var quickIngredientFocused: Bool
 
-    init(recipe: Recipe? = nil, startWithImport: Bool = false) {
+    init(recipe: Recipe? = nil) {
         self.recipe = recipe
-        self.startWithImport = startWithImport
         let initial = recipe.map { RecipeDraft(recipe: $0) } ?? RecipeDraft()
         self.original = initial
         _draft = State(initialValue: initial)
     }
 
     private var hasChanges: Bool { draft != original }
+    private var foodIndex: [UUID: Food] { NutritionCalculator.index(foods) }
 
     var body: some View {
         NavigationStack {
-            Form {
-                photoSection
-                infoSection
-                importSection
-                timeSection
-                nutritionSection
-                ingredientsSection
-                stepsSection
-                tagsSection
-                Section("Origem e notas") {
-                    TextField("Link da publicação (Instagram, TikTok…)", text: $draft.sourceURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Notas, dicas, substituições…", text: $draft.notes, axis: .vertical)
-                        .lineLimit(3...8)
+            ScrollViewReader { proxy in
+                Form {
+                    photoSection
+                    infoSection
+                    timeSection
+                    ingredientsSection
+                        .id("ingredients")
+                    nutritionSection
+                    stepsSection
+                    tagsSection
+                    Section("Origem e notas") {
+                        TextField("Link da publicação (Instagram, TikTok…)", text: $draft.sourceURL)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        TextField("Notas, dicas, substituições…", text: $draft.notes, axis: .vertical)
+                            .lineLimit(3...8)
+                    }
+                }
+                .onAppear {
+                    // Usado apenas nas capturas automáticas do CI.
+                    if UserDefaults.standard.bool(forKey: "screenshotEditorIngredients") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            proxy.scrollTo("ingredients", anchor: .top)
+                        }
+                    }
                 }
             }
             .navigationTitle(recipe == nil ? "Nova receita" : "Editar receita")
@@ -63,22 +72,22 @@ struct RecipeEditorView: View {
                 }
             }
             .interactiveDismissDisabled(hasChanges)
-            .confirmationDialog("Descartar alterações?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+            .alert("Descartar alterações?", isPresented: $confirmDiscard) {
                 Button("Descartar", role: .destructive) { dismiss() }
                 Button("Continuar a editar", role: .cancel) {}
+            } message: {
+                Text("As alterações a esta receita vão perder-se.")
             }
-            .sheet(isPresented: $showingImport) {
-                ImportTextView { result in
-                    withAnimation { draft.merge(result) }
+            .sheet(isPresented: $showingPicker) {
+                IngredientPickerView { ingredient in
+                    withAnimation { draft.ingredients.append(ingredient) }
                 }
+            }
+            .sheet(item: $editingIngredient) { ingredient in
+                ingredientEditor(for: ingredient)
             }
             .onChange(of: photoItem) { _, item in
                 loadPhoto(item)
-            }
-            .task {
-                guard startWithImport else { return }
-                try? await Task.sleep(for: .milliseconds(450))
-                showingImport = true
             }
         }
     }
@@ -147,18 +156,6 @@ struct RecipeEditorView: View {
         }
     }
 
-    private var importSection: some View {
-        Section {
-            Button {
-                showingImport = true
-            } label: {
-                Label("Importar de texto ou captura de ecrã", systemImage: "text.viewfinder")
-            }
-        } footer: {
-            Text("Cola a legenda de uma publicação e a app preenche os ingredientes, os passos e os macros.")
-        }
-    }
-
     private var timeSection: some View {
         Section("Tempo e porções") {
             Stepper(value: $draft.servings, in: 1...50) {
@@ -169,49 +166,67 @@ struct RecipeEditorView: View {
         }
     }
 
-    private var nutritionSection: some View {
-        Section {
-            DecimalFieldRow(title: "Calorias", unit: "kcal", value: $draft.calories)
-            DecimalFieldRow(title: "Proteína", unit: "g", value: $draft.protein)
-            DecimalFieldRow(title: "Hidratos", unit: "g", value: $draft.carbs)
-            DecimalFieldRow(title: "Gordura", unit: "g", value: $draft.fat)
-            DecimalFieldRow(title: "Fibra", unit: "g", value: $draft.fiber)
-        } header: {
-            Text("Nutrição por porção")
-        } footer: {
-            let estimate = draft.macroCalories.rounded()
-            if estimate > 0 && abs(estimate - draft.calories) >= 5 {
-                Button("Pelos macros dá \(Int(estimate)) kcal. Usar este valor") {
-                    draft.calories = estimate
-                }
-                .font(.footnote.weight(.semibold))
-            }
-        }
-    }
-
     private var ingredientsSection: some View {
         Section {
-            ForEach($draft.ingredients) { $ingredient in
-                IngredientEditorRow(ingredient: $ingredient)
+            ForEach(draft.ingredients) { ingredient in
+                Button {
+                    editingIngredient = ingredient
+                } label: {
+                    EditorIngredientRow(ingredient: ingredient, food: ingredient.foodID.flatMap { foodIndex[$0] })
+                }
+                .tint(.primary)
             }
             .onDelete { draft.ingredients.remove(atOffsets: $0) }
             .onMove { draft.ingredients.move(fromOffsets: $0, toOffset: $1) }
 
-            HStack {
-                TextField("Ex.: 200 g peito de frango", text: $quickIngredient)
-                    .focused($quickIngredientFocused)
-                    .submitLabel(.next)
-                    .onSubmit(addQuickIngredient)
-                Button("Adicionar ingrediente", systemImage: "plus.circle.fill", action: addQuickIngredient)
-                    .labelStyle(.iconOnly)
-                    .font(.title3)
-                    .buttonStyle(.borderless)
-                    .disabled(quickIngredient.trimmed.isEmpty)
+            Button {
+                showingPicker = true
+            } label: {
+                Label("Adicionar ingrediente", systemImage: "plus.circle.fill")
             }
         } header: {
             Text("Ingredientes")
         } footer: {
-            Text("Escreve a quantidade, a unidade e o ingrediente numa só linha. Arrasta para reordenar e desliza para apagar.")
+            Text("Escolhe os ingredientes da biblioteca de alimentos e indica a quantidade total usada na receita. Toca num ingrediente para o alterar; arrasta para reordenar e desliza para apagar.")
+        }
+    }
+
+    private var nutritionSection: some View {
+        let summary = NutritionCalculator.summarize(draft.ingredients, foods: foodIndex)
+        let perServing = summary.total.scaled(by: 1 / Double(max(1, draft.servings)))
+        let usesLegacy = summary.linked == 0 && !draft.legacyNutrition.isEmpty
+        return Section {
+            if usesLegacy {
+                MacroStrip(facts: draft.legacyNutrition)
+                    .padding(.vertical, 6)
+            } else if draft.ingredients.isEmpty {
+                Text("Adiciona ingredientes para ver as calorias e os macros.")
+                    .foregroundStyle(.secondary)
+            } else {
+                MacroStrip(facts: perServing)
+                    .padding(.vertical, 6)
+                NutritionLabel(columns: [
+                    .init(title: "Por porção", facts: perServing),
+                    .init(title: "Receita toda", facts: summary.total),
+                ])
+                .padding(.vertical, 4)
+            }
+        } header: {
+            Text("Nutrição · calculada automaticamente")
+        } footer: {
+            if usesLegacy {
+                Text("Estes valores foram introduzidos à mão numa versão anterior. Liga os ingredientes à biblioteca para passarem a ser calculados automaticamente.")
+            } else if summary.unresolved > 0 {
+                Label(
+                    summary.unresolved == 1
+                        ? "1 ingrediente não conta para os valores (sem alimento associado ou sem conversão para a unidade escolhida)."
+                        : "\(summary.unresolved) ingredientes não contam para os valores (sem alimento associado ou sem conversão para a unidade escolhida).",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(.orange)
+            } else if !draft.ingredients.isEmpty {
+                Text("Valores por porção, com \(Format.servings(draft.servings)).")
+            }
         }
     }
 
@@ -286,18 +301,35 @@ struct RecipeEditorView: View {
         }
     }
 
+    // MARK: - Ingredientes
+
+    @ViewBuilder
+    private func ingredientEditor(for ingredient: Ingredient) -> some View {
+        if let food = ingredient.foodID.flatMap({ foodIndex[$0] }) {
+            NavigationStack {
+                IngredientQuantityView(food: food, initial: ingredient, confirmTitle: "Guardar", showsCancel: true) { updated in
+                    replace(ingredient, with: updated)
+                }
+            }
+        } else {
+            // Ingrediente antigo, ainda sem alimento: escolher um da biblioteca.
+            IngredientPickerView(replacing: ingredient) { updated in
+                replace(ingredient, with: updated)
+            }
+        }
+    }
+
+    private func replace(_ ingredient: Ingredient, with updated: Ingredient) {
+        if let index = draft.ingredients.firstIndex(where: { $0.id == ingredient.id }) {
+            draft.ingredients[index] = updated
+        }
+        editingIngredient = nil
+    }
+
     // MARK: - Ações
 
     private func stepNumber(for id: UUID) -> Int {
         (draft.steps.firstIndex { $0.id == id } ?? 0) + 1
-    }
-
-    private func addQuickIngredient() {
-        let text = quickIngredient.trimmed
-        guard !text.isEmpty else { return }
-        withAnimation { draft.ingredients.append(RecipeTextParser.parseIngredient(text)) }
-        quickIngredient = ""
-        quickIngredientFocused = true
     }
 
     private func addTag() {
@@ -334,69 +366,48 @@ struct RecipeEditorView: View {
             target = Recipe()
             context.insert(target)
         }
-        draft.apply(to: target)
+        draft.apply(to: target, foods: foodIndex)
         try? context.save()
         dismiss()
     }
 }
 
-// MARK: - Linhas do formulário
+/// Linha de ingrediente no editor: alimento, quantidade e calorias dessa quantidade.
+private struct EditorIngredientRow: View {
+    let ingredient: Ingredient
+    let food: Food?
 
-struct IngredientEditorRow: View {
-    @Binding var ingredient: Ingredient
-
-    var body: some View {
-        HStack(spacing: 8) {
-            TextField("Qtd.", value: $ingredient.amount, format: .number)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 54)
-            TextField("un.", text: $ingredient.unit)
-                .textInputAutocapitalization(.never)
-                .foregroundStyle(.secondary)
-                .frame(width: 60)
-            Divider()
-            TextField("Ingrediente", text: $ingredient.name)
+    private var detail: String {
+        guard let food else { return "Não está na biblioteca · toca para escolher o alimento" }
+        let amount = ingredient.amountText() ?? ingredient.unit
+        guard let facts = NutritionCalculator.facts(for: ingredient, food: food) else {
+            return "\(amount) · sem conversão para esta unidade"
         }
+        if ingredient.unit == IngredientUnit.toTaste.rawValue { return amount }
+        return "\(amount) · \(Int(facts.calories.rounded())) kcal · \(facts.protein.cleanString) g proteína"
     }
-}
-
-struct DecimalFieldRow: View {
-    let title: String
-    let unit: String
-    @Binding var value: Double
 
     var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            TextField("0", value: $value, format: .number.precision(.fractionLength(0...1)))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 90)
-            Text(unit)
-                .foregroundStyle(.secondary)
-                .frame(width: 34, alignment: .leading)
+        HStack(spacing: 12) {
+            if let food {
+                FoodIcon(category: food.category, size: 30)
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .frame(width: 30, height: 30)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(food?.name ?? ingredient.name)
+                    .foregroundStyle(.primary)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(food == nil ? Color.orange : Color.secondary)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
-    }
-}
-
-struct IntegerFieldRow: View {
-    let title: String
-    let unit: String
-    @Binding var value: Int
-
-    var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            TextField("0", value: $value, format: .number)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 90)
-            Text(unit)
-                .foregroundStyle(.secondary)
-                .frame(width: 34, alignment: .leading)
-        }
+        .contentShape(Rectangle())
     }
 }

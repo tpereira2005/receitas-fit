@@ -4,31 +4,81 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct RecipeBackup: Codable {
-    var version = 1
+    var version = 2
     var exportedAt = Date()
     var recipes: [RecipeDTO]
+    /// Ausente nas cópias da versão 1.
+    var foods: [FoodDTO]?
 
-    static func encode(_ recipes: [Recipe]) throws -> Data {
+    static func encode(recipes: [Recipe], foods: [Food]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode(RecipeBackup(recipes: recipes.map(RecipeDTO.init(recipe:))))
+        let backup = RecipeBackup(recipes: recipes.map(RecipeDTO.init(recipe:)), foods: foods.map(FoodDTO.init(food:)))
+        return try encoder.encode(backup)
     }
 
-    /// Importa as receitas que ainda não existem. Devolve quantas foram adicionadas.
+    struct RestoreResult {
+        var recipes = 0
+        var foods = 0
+    }
+
+    /// Importa os alimentos e as receitas que ainda não existem.
     @MainActor
-    static func restore(from data: Data, into context: ModelContext, existing: [Recipe]) throws -> Int {
+    static func restore(from data: Data, into context: ModelContext) throws -> RestoreResult {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(RecipeBackup.self, from: data)
-        let existingIDs = Set(existing.map(\.id))
-        var added = 0
-        for dto in backup.recipes where !existingIDs.contains(dto.id) {
+
+        let existingFoods = Set(((try? context.fetch(FetchDescriptor<Food>())) ?? []).map(\.id))
+        let existingRecipes = Set(((try? context.fetch(FetchDescriptor<Recipe>())) ?? []).map(\.id))
+        var result = RestoreResult()
+
+        for dto in backup.foods ?? [] where !existingFoods.contains(dto.id) {
+            context.insert(dto.makeFood())
+            result.foods += 1
+        }
+        for dto in backup.recipes where !existingRecipes.contains(dto.id) {
             context.insert(dto.makeRecipe())
-            added += 1
+            result.recipes += 1
         }
         try context.save()
-        return added
+        NutritionCalculator.refreshAllRecipes(in: context)
+        return result
+    }
+}
+
+struct FoodDTO: Codable {
+    var id: UUID
+    var name: String
+    var brand: String
+    var category: String
+    var measureBase: String
+    var unitWeight: Double?
+    var per100: NutritionFacts
+    var createdAt: Date
+
+    init(food: Food) {
+        id = food.id
+        name = food.name
+        brand = food.brand
+        category = food.categoryRaw
+        measureBase = food.measureBaseRaw
+        unitWeight = food.unitWeight
+        per100 = food.per100
+        createdAt = food.createdAt
+    }
+
+    func makeFood() -> Food {
+        let food = Food(name: name)
+        food.id = id
+        food.brand = brand
+        food.categoryRaw = category
+        food.measureBaseRaw = measureBase
+        food.unitWeight = unitWeight
+        food.per100 = per100
+        food.createdAt = createdAt
+        return food
     }
 }
 
@@ -46,6 +96,11 @@ struct RecipeDTO: Codable {
     var carbs: Double
     var fat: Double
     var fiber: Double
+    // Opcionais para aceitar cópias da versão 1.
+    var sugars: Double?
+    var saturatedFat: Double?
+    var salt: Double?
+    var nutritionIsComputed: Bool?
     var sourceURL: String
     var notes: String
     var isFavorite: Bool
@@ -69,6 +124,10 @@ struct RecipeDTO: Codable {
         carbs = recipe.carbs
         fat = recipe.fat
         fiber = recipe.fiber
+        sugars = recipe.sugars
+        saturatedFat = recipe.saturatedFat
+        salt = recipe.salt
+        nutritionIsComputed = recipe.nutritionIsComputed
         sourceURL = recipe.sourceURL
         notes = recipe.notes
         isFavorite = recipe.isFavorite
@@ -93,6 +152,10 @@ struct RecipeDTO: Codable {
         recipe.carbs = carbs
         recipe.fat = fat
         recipe.fiber = fiber
+        recipe.sugars = sugars ?? 0
+        recipe.saturatedFat = saturatedFat ?? 0
+        recipe.salt = salt ?? 0
+        recipe.nutritionIsComputed = nutritionIsComputed ?? false
         recipe.sourceURL = sourceURL
         recipe.notes = notes
         recipe.isFavorite = isFavorite

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Query private var recipes: [Recipe]
+    @Query private var foods: [Food]
 
     @State private var exportDocument: BackupDocument?
     @State private var isExporting = false
@@ -29,28 +30,37 @@ struct SettingsView: View {
                 Section("Resumo") {
                     LabeledContent("Receitas", value: "\(recipes.count)")
                     LabeledContent("Favoritas", value: "\(recipes.filter(\.isFavorite).count)")
+                    LabeledContent("Alimentos na biblioteca", value: "\(foods.count)")
                     LabeledContent("Com fotografia", value: "\(recipes.filter { $0.thumbnailData != nil }.count)")
                 }
 
                 Section {
                     Button("Exportar cópia de segurança", systemImage: "square.and.arrow.up", action: export)
-                        .disabled(recipes.isEmpty)
+                        .disabled(recipes.isEmpty && foods.isEmpty)
                     Button("Importar cópia de segurança", systemImage: "square.and.arrow.down") {
                         isImporting = true
                     }
                 } header: {
                     Text("Cópia de segurança")
                 } footer: {
-                    Text("As receitas ficam guardadas apenas neste iPhone. Exporta regularmente um ficheiro para a app Ficheiros ou para o iCloud Drive para nunca perderes nada.")
+                    Text("As receitas e os alimentos ficam guardados apenas neste iPhone. Exporta regularmente um ficheiro para a app Ficheiros ou para o iCloud Drive para nunca perderes nada.")
                 }
 
                 Section {
                     Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
-                        SampleData.insert(into: context)
-                        message = "Foram adicionadas 6 receitas de exemplo."
+                        let count = SampleData.insert(into: context)
+                        message = "Foram adicionadas \(count) receitas de exemplo."
+                    }
+                    Button("Repor alimentos de origem", systemImage: "basket") {
+                        let before = foods.count
+                        FoodLibrary.insertMissingDefaults(in: context)
+                        let added = ((try? context.fetchCount(FetchDescriptor<Food>())) ?? before) - before
+                        message = added == 0
+                            ? "A biblioteca já tem todos os alimentos de origem."
+                            : "Foram adicionados \(added) alimentos à biblioteca."
                     }
                 } footer: {
-                    Text("Podes apagá-las a qualquer momento com um toque longo no cartão.")
+                    Text("Os alimentos de origem têm valores médios. Podes editá-los com os valores do rótulo das marcas que usas.")
                 }
 
                 Section("Sobre") {
@@ -86,7 +96,7 @@ struct SettingsView: View {
 
     private func export() {
         do {
-            exportDocument = BackupDocument(data: try RecipeBackup.encode(recipes))
+            exportDocument = BackupDocument(data: try RecipeBackup.encode(recipes: recipes, foods: foods))
             isExporting = true
         } catch {
             message = "Não foi possível exportar: \(error.localizedDescription)"
@@ -100,11 +110,13 @@ struct SettingsView: View {
             defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
             do {
                 let data = try Data(contentsOf: url)
-                let added = try RecipeBackup.restore(from: data, into: context, existing: recipes)
-                switch added {
-                case 0: message = "Todas as receitas deste ficheiro já existem na app."
-                case 1: message = "1 receita importada."
-                default: message = "\(added) receitas importadas."
+                let restored = try RecipeBackup.restore(from: data, into: context)
+                if restored.recipes == 0 && restored.foods == 0 {
+                    message = "Tudo o que está neste ficheiro já existe na app."
+                } else {
+                    let recipesText = restored.recipes == 1 ? "1 receita" : "\(restored.recipes) receitas"
+                    let foodsText = restored.foods == 1 ? "1 alimento" : "\(restored.foods) alimentos"
+                    message = "Importados: \(recipesText) e \(foodsText)."
                 }
             } catch {
                 message = "Este ficheiro não parece ser uma cópia de segurança válida."

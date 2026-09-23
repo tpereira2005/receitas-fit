@@ -10,17 +10,20 @@ on:
 permissions:
   contents: write
 
+# As builds ficam em fila (não se cancelam), para nunca publicar uma versão a meio.
 concurrency:
   group: build
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   SCHEME: ReceitasFit
   BUNDLE_ID: com.tpereira.receitasfit
+  # Versão base; o número da build é acrescentado automaticamente (ex.: 1.1.7).
+  VERSION_BASE: "1.1"
 
 jobs:
   ipa:
-    name: IPA para o SideStore
+    name: IPA e fonte do SideStore
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
@@ -29,6 +32,9 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - name: Definir versão
+        run: echo "APP_VERSION=$VERSION_BASE.${{ github.run_number }}" >> "$GITHUB_ENV"
 
       - name: Gerar projeto Xcode
         run: |
@@ -44,6 +50,7 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
+            MARKETING_VERSION="$APP_VERSION" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             | xcbeautify --renderer github-actions
@@ -54,22 +61,57 @@ jobs:
           cp -R "build/Build/Products/Release-iphoneos/$SCHEME.app" Payload/
           zip -qry "$SCHEME.ipa" Payload
           ls -lh "$SCHEME.ipa"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "Payload/$SCHEME.app/Info.plist"
 
       - uses: actions/upload-artifact@v5
         with:
           name: ReceitasFit-ipa
           path: ReceitasFit.ipa
 
-      - name: Publicar na release "latest"
+      - name: Publicar versão
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest "$SCHEME.ipa" \
-            --title "Receitas · build ${{ github.run_number }}" \
-            --notes "Build automática de ${{ github.sha }}. Abre esta página no iPhone, descarrega o ReceitasFit.ipa e instala-o com o SideStore." \
+          git log -1 --pretty=%B > notes.txt
+          # Release própria desta versão (link fixo usado pelo SideStore)
+          gh release create "v$APP_VERSION" "$SCHEME.ipa" \
+            --title "Receitas $APP_VERSION" \
+            --notes-file notes.txt \
             --target "${{ github.sha }}" \
             --latest
+          # Release "latest": link fixo para instalar à mão e para as capturas de ecrã
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest "$SCHEME.ipa" --clobber
+            gh release edit latest --title "Receitas · última build ($APP_VERSION)" --latest=false
+          else
+            gh release create latest "$SCHEME.ipa" --title "Receitas · última build ($APP_VERSION)" \
+              --notes "IPA e capturas de ecrã da última build." --latest=false
+          fi
+          # Manter só as 5 versões mais recentes
+          gh release list --limit 100 --json tagName --jq '.[].tagName' \
+            | grep '^v' | sort -V -r | tail -n +6 \
+            | xargs -I{} gh release delete {} --yes --cleanup-tag
+
+      - name: Atualizar fonte do SideStore
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          export IPA_SIZE=$(stat -f%z "$SCHEME.ipa")
+          export NOTES="$(cat notes.txt)"
+          work=$(mktemp -d)
+          python3 scripts/make_source.py > "$work/source.json"
+          python3 -m json.tool "$work/source.json" > /dev/null
+          cd "$work"
+          printf '# Fonte do SideStore\n\nAdiciona este link no SideStore (Fontes → +):\n\nhttps://raw.githubusercontent.com/%s/sidestore/source.json\n' "$REPO" > README.md
+          git init -q -b sidestore
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -qm "Fonte SideStore $APP_VERSION"
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" sidestore
+          cat source.json
 
   screenshots:
     name: Capturas do simulador
@@ -129,12 +171,15 @@ jobs:
           shot 1-inicio
           shot 2-receita -screenshotOpenFirst YES
           shot 3-pesquisa -tab search -screenshotSearch frango
-          shot 4-explorar -tab explore
-          shot 5-favoritas -tab favorites
-          shot 6-editor -screenshotEditor YES
+          shot 4-alimentos -tab foods
+          shot 5-alimento -tab foods -screenshotOpenFood YES
+          shot 6-editor -screenshotEditFirst YES -screenshotEditorIngredients YES
+          shot 7-receita-nutricao -screenshotOpenFirst YES -screenshotDetailScroll YES
+          shot 8-explorar -tab explore
           xcrun simctl ui "$UDID" appearance dark
-          shot 7-inicio-escuro
-          shot 8-receita-escuro -screenshotOpenFirst YES
+          shot 9-inicio-escuro
+          shot 10-receita-escuro -screenshotOpenFirst YES
+          shot 11-receita-nutricao-escuro -screenshotOpenFirst YES -screenshotDetailScroll YES
 
       - uses: actions/upload-artifact@v5
         with:
@@ -144,4 +189,7 @@ jobs:
       - name: Anexar capturas à release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload latest screenshots/*.png --clobber
+        run: |
+          gh release view latest --json assets --jq '.assets[].name' | grep '\.png$' \
+            | xargs -I{} gh release delete-asset latest {} --yes
+          gh release upload latest screenshots/*.png --clobber

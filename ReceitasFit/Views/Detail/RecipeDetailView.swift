@@ -6,13 +6,21 @@ struct RecipeDetailView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Query private var foods: [Food]
     @State private var servings: Int
     @State private var checkedIngredients: Set<UUID> = []
     @State private var completedSteps: Set<UUID> = []
     @State private var showingEditor = false
     @State private var confirmDelete = false
+    @State private var showsCompactTitle = false
 
-    private let heroHeight: CGFloat = 400
+    /// Altura da fotografia.
+    private let heroHeight: CGFloat = 440
+    /// Quanto o brilho desfocado da foto se prolonga por baixo do título.
+    private let glowExtent: CGFloat = 300
+    /// Quanto o título sobe para dentro da zona onde a foto se dissolve.
+    private let headerOverlap: CGFloat = 96
 
     init(recipe: Recipe) {
         self.recipe = recipe
@@ -20,56 +28,104 @@ struct RecipeDetailView: View {
     }
 
     private var scale: Double { Double(servings) / Double(max(1, recipe.servings)) }
+    private var foodIndex: [UUID: Food] { NutritionCalculator.index(foods) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                hero
-                header
-                    .padding(.horizontal)
-                    .padding(.top, -36)
-                NutritionCard(recipe: recipe)
-                    .padding(.horizontal)
-                ingredientsSection
-                    .padding(.horizontal)
-                stepsSection
-                    .padding(.horizontal)
-                extrasSection
-                    .padding(.horizontal)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    hero
+                    header
+                        .padding(.horizontal)
+                        .padding(.top, -headerOverlap)
+                    nutritionCard
+                        .padding(.horizontal)
+                        .id("nutrition")
+                    ingredientsSection
+                        .padding(.horizontal)
+                    stepsSection
+                        .padding(.horizontal)
+                    extrasSection
+                        .padding(.horizontal)
+                }
+                .padding(.bottom, 40)
             }
-            .padding(.bottom, 40)
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > heroHeight - headerOverlap + 10
+            } action: { _, isPastHeader in
+                withAnimation(.easeInOut(duration: 0.25)) { showsCompactTitle = isPastHeader }
+            }
+            .scrollEdgeEffectHidden(!showsCompactTitle, for: .top)
+            .ignoresSafeArea(edges: .top)
+            .onAppear {
+                // Usado apenas nas capturas automáticas do CI.
+                if UserDefaults.standard.bool(forKey: "screenshotDetailScroll") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        withAnimation { proxy.scrollTo("nutrition", anchor: .top) }
+                    }
+                }
+            }
         }
-        .ignoresSafeArea(edges: .top)
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .sheet(isPresented: $showingEditor) {
             RecipeEditorView(recipe: recipe)
         }
-        .confirmationDialog("Apagar esta receita?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Apagar receita", role: .destructive, action: deleteRecipe)
+        .alert("Apagar receita?", isPresented: $confirmDelete) {
+            Button("Apagar", role: .destructive, action: deleteRecipe)
+            Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("Esta ação não pode ser anulada.")
+            Text("“\(recipe.title)” será apagada deste iPhone. Esta ação não pode ser anulada.")
         }
         .onChange(of: recipe.servings) { _, newValue in
             servings = max(1, newValue)
         }
     }
 
-    // MARK: - Secções
+    // MARK: - Fotografia
 
+    /// A fotografia dissolve-se num brilho desfocado com as suas próprias cores, que continua por baixo
+    /// do título e desaparece suavemente no fundo — em vez de terminar num bloco de cor sólida.
     private var hero: some View {
         GeometryReader { geo in
             let minY = geo.frame(in: .scrollView).minY
-            let stretch = max(0, minY)
-            RecipePhoto(recipe: recipe, variant: .full, symbolSize: 90)
-                .frame(width: geo.size.width, height: heroHeight + stretch)
-                .clipped()
-                .overlay(alignment: .bottom) {
-                    LinearGradient(colors: [.clear, Color(.systemBackground)], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 110)
-                }
-                .offset(y: -stretch)
+            let pull = max(0, minY)
+            let scrolled = max(0, -minY)
+            let width = geo.size.width
+
+            ZStack(alignment: .top) {
+                // 1. Brilho ambiente
+                RecipePhoto(recipe: recipe, variant: .thumbnail, symbolSize: 60)
+                    .frame(width: width, height: heroHeight + glowExtent + pull)
+                    .clipped()
+                    .blur(radius: 70, opaque: true)
+                    .saturation(1.35)
+                    .opacity(colorScheme == .dark ? 0.55 : 0.42)
+                    .mask {
+                        LinearGradient(stops: EasedGradient.fadeOut(from: 0.35, to: 1), startPoint: .top, endPoint: .bottom)
+                    }
+
+                // 2. Fotografia nítida, com paralaxe suave ao fazer scroll
+                RecipePhoto(recipe: recipe, variant: .full, symbolSize: 96)
+                    .frame(width: width, height: heroHeight + pull)
+                    .clipped()
+                    .mask {
+                        LinearGradient(stops: EasedGradient.fadeOut(from: 0.42, to: 0.93), startPoint: .top, endPoint: .bottom)
+                    }
+                    .offset(y: scrolled * 0.35)
+
+                // 3. Véu discreto no topo para a barra de estado e os botões
+                LinearGradient(
+                    stops: EasedGradient.fadeOut(color: Color(.systemBackground), from: 0, to: 1),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 150)
+                .opacity(0.45)
+            }
+            .offset(y: -pull)
+            .allowsHitTesting(false)
         }
         .frame(height: heroHeight)
     }
@@ -77,11 +133,13 @@ struct RecipeDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label(recipe.category.title, systemImage: recipe.category.symbol)
-                .font(.subheadline.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(recipe.category.color)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(recipe.category.color.opacity(0.16), in: .capsule)
             Text(recipe.title)
-                .font(.largeTitle.bold())
-                .fontDesign(.rounded)
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .fixedSize(horizontal: false, vertical: true)
             if !recipe.summary.isEmpty {
                 Text(recipe.summary)
@@ -104,6 +162,30 @@ struct RecipeDetailView: View {
             .scrollClipDisabled()
         }
     }
+
+    // MARK: - Nutrição
+
+    private var nutritionCard: some View {
+        let summary = NutritionCalculator.summarize(recipe.ingredients, foods: foodIndex)
+        let perServing: NutritionFacts
+        var note: String?
+        if summary.linked > 0 || recipe.nutritionIsComputed {
+            perServing = summary.total.scaled(by: 1 / Double(max(1, recipe.servings)))
+            if summary.unresolved == 1 {
+                note = "1 ingrediente não conta para estes valores."
+            } else if summary.unresolved > 1 {
+                note = "\(summary.unresolved) ingredientes não contam para estes valores."
+            }
+        } else {
+            perServing = recipe.perServing
+            if !perServing.isEmpty {
+                note = "Valores introduzidos à mão. Edita a receita e escolhe os ingredientes da biblioteca para passarem a ser calculados."
+            }
+        }
+        return NutritionCard(perServing: perServing, servings: recipe.servings, note: note)
+    }
+
+    // MARK: - Ingredientes
 
     private var ingredientsSection: some View {
         let ingredients = recipe.ingredients
@@ -159,6 +241,8 @@ struct RecipeDetailView: View {
 
     private func ingredientRow(_ ingredient: Ingredient) -> some View {
         let checked = checkedIngredients.contains(ingredient.id)
+        let food = ingredient.foodID.flatMap { foodIndex[$0] }
+        let calories = NutritionCalculator.facts(for: ingredient, food: food).map { $0.calories * scale }
         return Button {
             withAnimation(.snappy) {
                 if checked { checkedIngredients.remove(ingredient.id) } else { checkedIngredients.insert(ingredient.id) }
@@ -169,11 +253,18 @@ struct RecipeDetailView: View {
                     .font(.title3)
                     .foregroundStyle(checked ? Color.accentColor : Color.secondary)
                     .contentTransition(.symbolEffect(.replace))
-                ingredientText(ingredient)
+                ingredientText(ingredient, name: food?.name ?? ingredient.name)
                     .strikethrough(checked)
                     .foregroundStyle(checked ? Color.secondary : Color.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .multilineTextAlignment(.leading)
+                if let calories, calories >= 1 {
+                    Text("\(Int(calories.rounded())) kcal")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
             }
             .padding(.vertical, 12)
             .contentShape(Rectangle())
@@ -181,15 +272,17 @@ struct RecipeDetailView: View {
         .buttonStyle(.plain)
     }
 
-    private func ingredientText(_ ingredient: Ingredient) -> Text {
+    private func ingredientText(_ ingredient: Ingredient, name: String) -> Text {
         if let amount = ingredient.amountText(scale: scale) {
-            return Text("\(Text(amount).fontWeight(.semibold))  \(ingredient.name)")
+            return Text("\(Text(amount).fontWeight(.semibold))  \(name)")
         }
         if ingredient.unit.isEmpty {
-            return Text(ingredient.name)
+            return Text(name)
         }
-        return Text("\(ingredient.name)  \(Text(ingredient.unit).foregroundStyle(.secondary))")
+        return Text("\(name)  \(Text(ingredient.unit).foregroundStyle(.secondary))")
     }
+
+    // MARK: - Preparação
 
     private var stepsSection: some View {
         let steps = recipe.steps
@@ -249,7 +342,8 @@ struct RecipeDetailView: View {
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder
+    // MARK: - Notas e origem
+
     private var extrasSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             if !recipe.notes.isEmpty {
@@ -293,6 +387,13 @@ struct RecipeDetailView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Text(recipe.title)
+                .font(.headline)
+                .lineLimit(1)
+                .opacity(showsCompactTitle ? 1 : 0)
+        }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 withAnimation(.snappy) { recipe.isFavorite.toggle() }
@@ -325,5 +426,19 @@ struct RecipeDetailView: View {
             context.delete(recipe)
             try? context.save()
         }
+    }
+}
+
+/// Gradientes com curva suave (smootherstep), para as transições não terem um início ou fim visível.
+enum EasedGradient {
+    static func fadeOut(color: Color = .black, from start: Double, to end: Double, steps: Int = 24) -> [Gradient.Stop] {
+        var stops = [Gradient.Stop(color: color, location: 0)]
+        for step in 0...steps {
+            let t = Double(step) / Double(steps)
+            let eased = t * t * t * (t * (t * 6 - 15) + 10)
+            stops.append(Gradient.Stop(color: color.opacity(1 - eased), location: start + (end - start) * t))
+        }
+        stops.append(Gradient.Stop(color: color.opacity(0), location: 1))
+        return stops
     }
 }

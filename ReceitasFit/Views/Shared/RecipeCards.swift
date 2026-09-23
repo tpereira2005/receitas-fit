@@ -126,6 +126,7 @@ struct RecipeGrid: View {
     var source = "grid"
 
     @Environment(\.modelContext) private var context
+    @State private var pendingDeletion: Recipe?
 
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
@@ -149,12 +150,25 @@ struct RecipeGrid: View {
                     }
                     Divider()
                     Button("Apagar", systemImage: "trash", role: .destructive) {
-                        withAnimation { context.delete(recipe) }
+                        pendingDeletion = recipe
                     }
                 }
             }
         }
         .padding(.horizontal)
+        .alert(
+            "Apagar receita?",
+            isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
+            presenting: pendingDeletion
+        ) { recipe in
+            Button("Apagar", role: .destructive) {
+                withAnimation { context.delete(recipe) }
+                try? context.save()
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: { recipe in
+            Text("“\(recipe.title)” será apagada deste iPhone. Esta ação não pode ser anulada.")
+        }
     }
 }
 

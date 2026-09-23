@@ -2,16 +2,12 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
-    enum EditorMode: String, Identifiable {
-        case write, importText
-        var id: String { rawValue }
-    }
-
     @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
     @AppStorage("homeSort") private var sort: RecipeSort = .newest
     @State private var selectedCategory: RecipeCategory?
     @State private var path = NavigationPath()
-    @State private var editorMode: EditorMode?
+    @State private var showingNewRecipe = false
+    @State private var screenshotEditRecipe: Recipe?
     @State private var showingSettings = false
     @Namespace private var namespace
 
@@ -31,8 +27,11 @@ struct HomeView: View {
             .navigationTitle("Receitas")
             .toolbar { toolbarContent }
             .recipeDestinations(namespace)
-            .sheet(item: $editorMode) { mode in
-                RecipeEditorView(startWithImport: mode == .importText)
+            .sheet(isPresented: $showingNewRecipe) {
+                RecipeEditorView()
+            }
+            .sheet(item: $screenshotEditRecipe) { recipe in
+                RecipeEditorView(recipe: recipe)
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
@@ -91,10 +90,8 @@ struct HomeView: View {
         } description: {
             Text("Guarda aqui as receitas que crias ou encontras nas redes sociais.")
         } actions: {
-            Button("Nova receita", systemImage: "plus") { editorMode = .write }
+            Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
                 .buttonStyle(.glassProminent)
-            Button("Importar de texto", systemImage: "text.viewfinder") { editorMode = .importText }
-                .buttonStyle(.glass)
         }
     }
 
@@ -115,14 +112,7 @@ struct HomeView: View {
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button("Escrever receita", systemImage: "square.and.pencil") { editorMode = .write }
-                Button("Importar texto ou captura", systemImage: "text.viewfinder") { editorMode = .importText }
-            } label: {
-                Label("Adicionar", systemImage: "plus")
-            } primaryAction: {
-                editorMode = .write
-            }
+            Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
         }
     }
 
@@ -131,8 +121,8 @@ struct HomeView: View {
         if defaults.bool(forKey: "screenshotOpenFirst"), path.isEmpty, let first = filtered.first {
             path.append(RecipeRoute(recipe: first))
         }
-        if defaults.bool(forKey: "screenshotEditor"), editorMode == nil {
-            editorMode = .write
+        if defaults.bool(forKey: "screenshotEditFirst"), screenshotEditRecipe == nil, let first = filtered.first {
+            screenshotEditRecipe = first
         }
     }
 }

@@ -1,5 +1,4 @@
 import UIKit
-import Vision
 
 enum ImageProcessing {
     struct Output {
@@ -45,32 +44,5 @@ final class ImageCache {
         guard let image = UIImage(data: data) else { return nil }
         cache.setObject(image, forKey: key as NSString)
         return image
-    }
-}
-
-/// Reconhecimento de texto (OCR) no próprio iPhone, para importar receitas a partir de capturas de ecrã.
-enum TextRecognizer {
-    static func recognizeText(in data: Data) async -> String {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                guard let image = UIImage(data: data)?.resized(maxDimension: 2400), let cgImage = image.cgImage else {
-                    continuation.resume(returning: "")
-                    return
-                }
-                let request = VNRecognizeTextRequest()
-                request.recognitionLevel = .accurate
-                request.usesLanguageCorrection = true
-                request.automaticallyDetectsLanguage = true
-                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-                do {
-                    try handler.perform([request])
-                } catch {
-                    continuation.resume(returning: "")
-                    return
-                }
-                let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
-                continuation.resume(returning: lines.joined(separator: "\n"))
-            }
-        }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
-    case breakfast, lunch, dinner, snack, dessert, drink, other
+    case breakfast, lunch, dinner, snack, dessert, iceCream, drink, other
 
     var id: String { rawValue }
 
@@ -12,6 +12,7 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
         case .dinner: "Jantar"
         case .snack: "Snacks"
         case .dessert: "Sobremesas"
+        case .iceCream: "Gelados"
         case .drink: "Batidos"
         case .other: "Outras"
         }
@@ -24,6 +25,7 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
         case .dinner: "moon.stars.fill"
         case .snack: "carrot.fill"
         case .dessert: "birthday.cake.fill"
+        case .iceCream: "snowflake"
         case .drink: "takeoutbag.and.cup.and.straw.fill"
         case .other: "square.grid.2x2.fill"
         }
@@ -36,6 +38,7 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
         case .dinner: .indigo
         case .snack: .mint
         case .dessert: .pink
+        case .iceCream: .cyan
         case .drink: .teal
         case .other: .gray
         }

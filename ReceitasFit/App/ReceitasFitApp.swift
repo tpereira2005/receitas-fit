@@ -7,17 +7,18 @@ struct ReceitasFitApp: App {
         WindowGroup {
             RootView()
         }
-        .modelContainer(for: Recipe.self)
+        .modelContainer(for: [Recipe.self, Food.self])
     }
 }
 
 enum AppTab: String, Hashable {
-    case home, favorites, explore, search
+    case home, favorites, foods, explore, search
 }
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @AppStorage("didSeedSamples") private var didSeedSamples = false
+    @AppStorage("dataVersion") private var dataVersion = 0
 
     // Os argumentos "-tab" e "-screenshotSearch" são usados apenas para as capturas automáticas no CI.
     @State private var selectedTab = AppTab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .home
@@ -31,6 +32,9 @@ struct RootView: View {
             Tab("Favoritas", systemImage: "heart", value: AppTab.favorites) {
                 FavoritesView()
             }
+            Tab("Alimentos", systemImage: "basket", value: AppTab.foods) {
+                FoodsView()
+            }
             Tab("Explorar", systemImage: "square.grid.2x2", value: AppTab.explore) {
                 ExploreView()
             }
@@ -39,15 +43,20 @@ struct RootView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .task { seedIfNeeded() }
+        .task { prepareData() }
     }
 
-    private func seedIfNeeded() {
-        guard !didSeedSamples else { return }
-        didSeedSamples = true
-        let count = (try? context.fetchCount(FetchDescriptor<Recipe>())) ?? 0
-        if count == 0 {
-            SampleData.insert(into: context)
+    private func prepareData() {
+        if !didSeedSamples {
+            didSeedSamples = true
+            let count = (try? context.fetchCount(FetchDescriptor<Recipe>())) ?? 0
+            if count == 0 {
+                SampleData.insert(into: context)
+            }
+        }
+        if dataVersion < DataMigration.currentVersion {
+            DataMigration.migrateToV2(context)
+            dataVersion = DataMigration.currentVersion
         }
     }
 }

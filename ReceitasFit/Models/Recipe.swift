@@ -6,12 +6,15 @@ struct Ingredient: Codable, Hashable, Identifiable {
     var name: String
     var amount: Double?
     var unit: String
+    /// Alimento da biblioteca que fornece os valores nutricionais. `nil` em ingredientes antigos.
+    var foodID: UUID?
 
-    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "") {
+    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "", foodID: UUID? = nil) {
         self.id = id
         self.name = name
         self.amount = amount
         self.unit = unit
+        self.foodID = foodID
     }
 }
 
@@ -36,12 +39,17 @@ final class Recipe {
     var prepMinutes: Int = 0
     var cookMinutes: Int = 0
 
-    // Nutrição por porção
+    // Nutrição por porção (calculada a partir da biblioteca de alimentos)
     var calories: Double = 0
     var protein: Double = 0
     var carbs: Double = 0
     var fat: Double = 0
     var fiber: Double = 0
+    var sugars: Double = 0
+    var saturatedFat: Double = 0
+    var salt: Double = 0
+    /// `true` quando os valores vêm da biblioteca de alimentos; `false` em receitas antigas com valores manuais.
+    var nutritionIsComputed: Bool = false
 
     var sourceURL: String = ""
     var notes: String = ""
@@ -80,6 +88,24 @@ final class Recipe {
     }
 
     var totalMinutes: Int { prepMinutes + cookMinutes }
+
+    /// Valores por porção guardados na receita.
+    var perServing: NutritionFacts {
+        get {
+            NutritionFacts(calories: calories, protein: protein, carbs: carbs, sugars: sugars,
+                           fat: fat, saturatedFat: saturatedFat, fiber: fiber, salt: salt)
+        }
+        set {
+            calories = newValue.calories
+            protein = newValue.protein
+            carbs = newValue.carbs
+            sugars = newValue.sugars
+            fat = newValue.fat
+            saturatedFat = newValue.saturatedFat
+            fiber = newValue.fiber
+            salt = newValue.salt
+        }
+    }
 }
 
 // MARK: - Apresentação
@@ -118,7 +144,7 @@ extension Recipe {
         lines.append(contentsOf: steps.enumerated().map { "\($0.offset + 1). \($0.element.text)" })
         if calories > 0 || protein > 0 {
             lines.append("")
-            lines.append("Por porção: \(Int(calories.rounded())) kcal · P \(protein.cleanString) g · H \(carbs.cleanString) g · G \(fat.cleanString) g")
+            lines.append("Por porção: \(Int(calories.rounded())) kcal · Proteína \(protein.cleanString) g · Hidratos \(carbs.cleanString) g (açúcares \(sugars.cleanString) g) · Gordura \(fat.cleanString) g (saturada \(saturatedFat.cleanString) g)")
         }
         if let link = sourceLink {
             lines.append("")
