@@ -184,6 +184,21 @@ struct RecipeEditorView: View {
             } label: {
                 Label("Adicionar ingrediente", systemImage: "plus.circle.fill")
             }
+
+            let outdated = outdatedIngredientCount
+            if outdated > 0 {
+                Button {
+                    withAnimation { updateOutdatedIngredients() }
+                } label: {
+                    Label(
+                        outdated == 1
+                            ? "Usar valores atuais da biblioteca (1 ingrediente)"
+                            : "Usar valores atuais da biblioteca (\(outdated) ingredientes)",
+                        systemImage: "arrow.triangle.2.circlepath"
+                    )
+                }
+                .tint(.orange)
+            }
         } header: {
             Text("Ingredientes")
         } footer: {
@@ -319,6 +334,25 @@ struct RecipeEditorView: View {
         }
     }
 
+    /// Ingredientes cujo alimento foi editado na biblioteca depois de ser adicionado a esta receita.
+    private var outdatedIngredientCount: Int {
+        draft.ingredients.filter { ingredient in
+            guard let food = ingredient.foodID.flatMap({ foodIndex[$0] }) else { return false }
+            return NutritionCalculator.isOutdated(ingredient, comparedTo: food)
+        }.count
+    }
+
+    private func updateOutdatedIngredients() {
+        draft.ingredients = draft.ingredients.map { ingredient in
+            guard let food = ingredient.foodID.flatMap({ foodIndex[$0] }),
+                  NutritionCalculator.isOutdated(ingredient, comparedTo: food) else { return ingredient }
+            var updated = ingredient
+            updated.name = food.name
+            updated.snapshot = FoodSnapshot(food: food)
+            return updated
+        }
+    }
+
     private func replace(_ ingredient: Ingredient, with updated: Ingredient) {
         if let index = draft.ingredients.firstIndex(where: { $0.id == ingredient.id }) {
             draft.ingredients[index] = updated
@@ -377,31 +411,43 @@ private struct EditorIngredientRow: View {
     let ingredient: Ingredient
     let food: Food?
 
+    private var isLinked: Bool { food != nil || ingredient.snapshot != nil }
+
+    private var isOutdated: Bool {
+        guard let food else { return false }
+        return NutritionCalculator.isOutdated(ingredient, comparedTo: food)
+    }
+
     private var detail: String {
-        guard let food else { return "Não está na biblioteca · toca para escolher o alimento" }
+        guard isLinked else { return "Não está na biblioteca · toca para escolher o alimento" }
         let amount = ingredient.amountText() ?? ingredient.unit
         guard let facts = NutritionCalculator.facts(for: ingredient, food: food) else {
             return "\(amount) · sem conversão para esta unidade"
         }
-        if ingredient.unit == IngredientUnit.toTaste.rawValue { return amount }
-        return "\(amount) · \(Int(facts.calories.rounded())) kcal · \(facts.protein.cleanString) g proteína"
+        var text = ingredient.unit == IngredientUnit.toTaste.rawValue
+            ? amount
+            : "\(amount) · \(Int(facts.calories.rounded())) kcal · \(facts.protein.cleanString) g proteína"
+        if isOutdated { text += " · valores anteriores" }
+        return text
     }
 
     var body: some View {
         HStack(spacing: 12) {
             if let food {
                 FoodIcon(category: food.category, size: 30)
+            } else if ingredient.snapshot != nil {
+                FoodIcon(category: .other, size: 30)
             } else {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .frame(width: 30, height: 30)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(food?.name ?? ingredient.name)
+                Text(ingredient.name)
                     .foregroundStyle(.primary)
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(food == nil ? Color.orange : Color.secondary)
+                    .foregroundStyle(!isLinked || isOutdated ? Color.orange : Color.secondary)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")

@@ -6,15 +6,30 @@ struct Ingredient: Codable, Hashable, Identifiable {
     var name: String
     var amount: Double?
     var unit: String
-    /// Alimento da biblioteca que fornece os valores nutricionais. `nil` em ingredientes antigos.
+    /// Alimento da biblioteca de onde veio este ingrediente. `nil` em ingredientes antigos.
     var foodID: UUID?
+    /// Valores do alimento no momento em que foi adicionado (ou atualizado com autorização do utilizador).
+    var snapshot: FoodSnapshot?
 
-    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "", foodID: UUID? = nil) {
+    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "", foodID: UUID? = nil, snapshot: FoodSnapshot? = nil) {
         self.id = id
         self.name = name
         self.amount = amount
         self.unit = unit
         self.foodID = foodID
+        self.snapshot = snapshot
+    }
+
+    /// Cria um ingrediente a partir de um alimento da biblioteca, guardando os valores atuais.
+    init(food: Food, amount: Double?, unit: IngredientUnit, id: UUID = UUID()) {
+        self.init(
+            id: id,
+            name: food.name,
+            amount: unit == .toTaste ? nil : amount,
+            unit: unit.rawValue,
+            foodID: food.id,
+            snapshot: FoodSnapshot(food: food)
+        )
     }
 }
 

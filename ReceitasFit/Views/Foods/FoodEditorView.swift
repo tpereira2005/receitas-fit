@@ -4,6 +4,13 @@ import SwiftData
 struct FoodEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query private var recipes: [Recipe]
+
+    /// Receitas a rever depois de guardar um alimento já usado.
+    private struct PendingReview: Hashable {
+        let recipes: [Recipe]
+        let changes: [String]
+    }
 
     private let food: Food?
     private let onSave: ((Food) -> Void)?
@@ -11,6 +18,7 @@ struct FoodEditorView: View {
 
     @State private var draft: FoodDraft
     @State private var confirmDiscard = false
+    @State private var pendingReview: PendingReview?
 
     init(food: Food?, onSave: ((Food) -> Void)? = nil) {
         self.food = food
@@ -107,6 +115,13 @@ struct FoodEditorView: View {
                 Button("Descartar", role: .destructive) { dismiss() }
                 Button("Continuar a editar", role: .cancel) {}
             }
+            .navigationDestination(item: $pendingReview) { review in
+                if let food {
+                    FoodUpdateReviewView(food: food, recipes: review.recipes, changes: review.changes) {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 
@@ -118,12 +133,19 @@ struct FoodEditorView: View {
             target = Food()
             context.insert(target)
         }
+        let changes = draft.changes(from: original)
         draft.apply(to: target)
         try? context.save()
-        if food != nil {
-            NutritionCalculator.refreshAllRecipes(in: context)
-        }
         onSave?(target)
+
+        // Nunca altera receitas em silêncio: se o alimento já é usado, pergunta quais atualizar.
+        if food != nil, !changes.isEmpty {
+            let affected = NutritionCalculator.recipesAffected(by: target, in: recipes)
+            if !affected.isEmpty {
+                pendingReview = PendingReview(recipes: affected.sorted { $0.title < $1.title }, changes: changes)
+                return
+            }
+        }
         dismiss()
     }
 }

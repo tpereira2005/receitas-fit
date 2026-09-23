@@ -36,13 +36,10 @@ enum SampleData {
             recipe.isFavorite = sample.favorite
             recipe.notes = sample.notes
             recipe.ingredients = sample.items.map { item in
-                let food = foodsByName[item.food.searchNormalized]
-                return Ingredient(
-                    name: food?.name ?? item.food,
-                    amount: item.unit == .toTaste ? nil : item.amount,
-                    unit: item.unit.rawValue,
-                    foodID: food?.id
-                )
+                if let food = foodsByName[item.food.searchNormalized] {
+                    return Ingredient(food: food, amount: item.amount, unit: item.unit)
+                }
+                return Ingredient(name: item.food, amount: item.amount, unit: item.unit.rawValue)
             }
             recipe.steps = sample.steps.map { RecipeStep(text: $0) }
             recipe.createdAt = now.addingTimeInterval(TimeInterval(-offset * 3600))

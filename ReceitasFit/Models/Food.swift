@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// Valores nutricionais. Nos alimentos são por 100 g/ml; nas receitas são por porção.
-struct NutritionFacts: Equatable, Codable {
+struct NutritionFacts: Hashable, Codable {
     var calories: Double = 0
     var protein: Double = 0
     var carbs: Double = 0
@@ -213,6 +213,22 @@ final class Food {
     }
 }
 
+/// Cópia dos dados de um alimento guardada em cada ingrediente de uma receita.
+/// Assim, editar um alimento na biblioteca nunca altera uma receita sem o utilizador aceitar.
+struct FoodSnapshot: Codable, Hashable {
+    var name: String
+    var base: String
+    var unitWeight: Double?
+    var per100: NutritionFacts
+
+    init(food: Food) {
+        name = food.name
+        base = food.measureBaseRaw
+        unitWeight = food.unitWeight
+        per100 = food.per100
+    }
+}
+
 /// Cópia editável de um alimento.
 struct FoodDraft: Equatable {
     var name = ""
@@ -234,6 +250,37 @@ struct FoodDraft: Equatable {
     }
 
     var isValid: Bool { !name.trimmed.isEmpty }
+
+    /// Descrição legível do que mudou em relação a `original` (só dados que afetam as receitas).
+    func changes(from original: FoodDraft) -> [String] {
+        var lines: [String] = []
+        if name.trimmed != original.name.trimmed {
+            lines.append("Nome: \(original.name.trimmed) → \(name.trimmed)")
+        }
+        if base != original.base {
+            lines.append("Valores: \(original.base.title.lowercased()) → \(base.title.lowercased())")
+        }
+        let oldWeight = (original.unitWeight ?? 0) > 0 ? original.unitWeight : nil
+        let newWeight = (unitWeight ?? 0) > 0 ? unitWeight : nil
+        if oldWeight != newWeight {
+            let describe: (Double?) -> String = { $0.map { "\($0.cleanString) \(base.rawValue)" } ?? "—" }
+            lines.append("Peso de 1 unidade: \(describe(oldWeight)) → \(describe(newWeight))")
+        }
+        let nutrients: [(String, String, KeyPath<NutritionFacts, Double>)] = [
+            ("Energia", "kcal", \.calories),
+            ("Lípidos", "g", \.fat),
+            ("Saturados", "g", \.saturatedFat),
+            ("Hidratos", "g", \.carbs),
+            ("Açúcares", "g", \.sugars),
+            ("Fibra", "g", \.fiber),
+            ("Proteína", "g", \.protein),
+            ("Sal", "g", \.salt),
+        ]
+        for (title, unit, keyPath) in nutrients where facts[keyPath: keyPath] != original.facts[keyPath: keyPath] {
+            lines.append("\(title): \(original.facts[keyPath: keyPath].cleanString) → \(facts[keyPath: keyPath].cleanString) \(unit)")
+        }
+        return lines
+    }
 
     func apply(to food: Food) {
         food.name = name.trimmed

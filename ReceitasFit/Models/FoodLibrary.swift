@@ -123,7 +123,26 @@ enum FoodLibrary {
 
 /// Atualizações de dados entre versões da app.
 enum DataMigration {
-    static let currentVersion = 2
+    static let currentVersion = 3
+
+    @MainActor
+    static func migrate(_ context: ModelContext, from version: Int) {
+        if version < 2 { migrateToV2(context) }
+        if version < 3 { migrateToV3(context) }
+    }
+
+    /// Versão 3: cada ingrediente guarda uma cópia dos valores do alimento (os valores não mudam).
+    @MainActor
+    static func migrateToV3(_ context: ModelContext) {
+        let foodIndex = NutritionCalculator.index((try? context.fetch(FetchDescriptor<Food>())) ?? [])
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        for recipe in recipes {
+            let original = recipe.ingredients
+            let filled = NutritionCalculator.fillMissingSnapshots(original, foods: foodIndex)
+            if filled != original { recipe.ingredients = filled }
+        }
+        try? context.save()
+    }
     static let removedTags: Set<String> = ["Vegetariana", "Vegan", "Sem glúten", "Sem lactose"]
 
     /// Versão 2: biblioteca de alimentos, cálculo automático e remoção de etiquetas.

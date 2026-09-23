@@ -10,9 +10,16 @@ struct FoodDetailView: View {
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
     @State private var showingEditor = false
     @State private var confirmDelete = false
+    @State private var showingReview = false
+    @State private var reviewChanges: [String] = []
 
     private var usedIn: [Recipe] {
         recipes.filter { $0.ingredients.contains { $0.foodID == food.id } }
+    }
+
+    /// Receitas que mantiveram valores anteriores deste alimento.
+    private var outdated: [Recipe] {
+        NutritionCalculator.recipesAffected(by: food, in: recipes)
     }
 
     private var columns: [NutritionLabel.Column] {
@@ -27,6 +34,10 @@ struct FoodDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
+
+                if !outdated.isEmpty {
+                    outdatedBanner
+                }
 
                 MacroStrip(facts: food.per100)
                     .padding(.vertical, 16)
@@ -79,6 +90,15 @@ struct FoodDetailView: View {
         .sheet(isPresented: $showingEditor) {
             FoodEditorView(food: food)
         }
+        .sheet(isPresented: $showingReview) {
+            NavigationStack {
+                FoodUpdateReviewView(food: food, recipes: outdated, changes: reviewChanges) {
+                    showingReview = false
+                    reviewChanges = []
+                }
+            }
+        }
+        .onAppear(perform: handleScreenshotArguments)
         .alert("Apagar alimento?", isPresented: $confirmDelete) {
             Button("Apagar", role: .destructive, action: deleteFood)
             Button("Cancelar", role: .cancel) {}
@@ -86,7 +106,7 @@ struct FoodDetailView: View {
             if usedIn.isEmpty {
                 Text("“\(food.name)” será apagado da biblioteca.")
             } else {
-                Text("“\(food.name)” é usado em \(Format.recipes(usedIn.count)). Nessas receitas, este ingrediente deixa de contar para os valores nutricionais.")
+                Text("“\(food.name)” é usado em \(Format.recipes(usedIn.count)). Essas receitas mantêm os valores atuais deste ingrediente.")
             }
         }
     }
@@ -108,6 +128,39 @@ struct FoodDetailView: View {
         }
     }
 
+    private var outdatedBanner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(outdated.count == 1
+                     ? "1 receita usa valores anteriores deste alimento."
+                     : "\(outdated.count) receitas usam valores anteriores deste alimento.")
+                    .font(.subheadline.weight(.medium))
+                Button("Rever e atualizar") { showingReview = true }
+                    .font(.subheadline.weight(.semibold))
+                    .buttonStyle(.glass)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    /// Usado apenas nas capturas automáticas do CI: simula a edição do alimento para mostrar a revisão.
+    private func handleScreenshotArguments() {
+        guard UserDefaults.standard.bool(forKey: "screenshotFoodReview"), !showingReview, !usedIn.isEmpty else { return }
+        var draft = FoodDraft(food: food)
+        let original = draft
+        draft.facts.calories += 10
+        draft.facts.protein += 2
+        draft.apply(to: food)
+        try? context.save()
+        reviewChanges = draft.changes(from: original)
+        showingReview = true
+    }
+
     private func deleteFood() {
         let food = food
         let context = context
@@ -115,7 +168,6 @@ struct FoodDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             context.delete(food)
             try? context.save()
-            NutritionCalculator.refreshAllRecipes(in: context)
         }
     }
 }

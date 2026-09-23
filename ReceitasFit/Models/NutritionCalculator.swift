@@ -1,11 +1,14 @@
 import Foundation
 import SwiftData
 
-/// Calcula os valores nutricionais das receitas a partir da biblioteca de alimentos.
+/// Calcula os valores nutricionais das receitas.
+///
+/// Cada ingrediente guarda uma cópia (`FoodSnapshot`) dos valores do alimento. Os cálculos usam sempre
+/// essa cópia, por isso editar um alimento na biblioteca só altera uma receita quando o utilizador aceita.
 enum NutritionCalculator {
     struct Summary {
         var total = NutritionFacts.zero
-        /// Ingredientes ligados a um alimento da biblioteca.
+        /// Ingredientes com valores nutricionais (ligados a um alimento).
         var linked = 0
         /// Ingredientes que não contam para o total (sem alimento ou sem conversão possível).
         var unresolved = 0
@@ -15,8 +18,8 @@ enum NutritionCalculator {
         Dictionary(foods.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// Converte a quantidade do ingrediente em gramas (ou ml) do alimento.
-    static func grams(amount: Double?, unit: String, food: Food) -> Double? {
+    /// Converte a quantidade do ingrediente em gramas (ou ml).
+    static func grams(amount: Double?, unit: String, unitWeight: Double?) -> Double? {
         guard let unit = IngredientUnit(rawValue: unit) else { return nil }
         switch unit {
         case .toTaste:
@@ -24,8 +27,8 @@ enum NutritionCalculator {
         case .gram, .milliliter:
             return amount
         case .unit:
-            guard let amount, let weight = food.unitWeight, weight > 0 else { return nil }
-            return amount * weight
+            guard let amount, let unitWeight, unitWeight > 0 else { return nil }
+            return amount * unitWeight
         case .tablespoon:
             return amount.map { $0 * 15 }
         case .teaspoon:
@@ -33,16 +36,19 @@ enum NutritionCalculator {
         }
     }
 
+    /// Valores de um ingrediente. Usa a cópia guardada; o alimento só serve de recurso para ingredientes antigos.
     static func facts(for ingredient: Ingredient, food: Food?) -> NutritionFacts? {
-        guard let food, let grams = grams(amount: ingredient.amount, unit: ingredient.unit, food: food) else { return nil }
-        return food.per100.scaled(by: grams / 100)
+        guard let source = ingredient.snapshot ?? food.map(FoodSnapshot.init(food:)),
+              let grams = grams(amount: ingredient.amount, unit: ingredient.unit, unitWeight: source.unitWeight)
+        else { return nil }
+        return source.per100.scaled(by: grams / 100)
     }
 
     static func summarize(_ ingredients: [Ingredient], foods: [UUID: Food]) -> Summary {
         var summary = Summary()
         for ingredient in ingredients {
             let food = ingredient.foodID.flatMap { foods[$0] }
-            if food != nil { summary.linked += 1 }
+            if ingredient.snapshot != nil || food != nil { summary.linked += 1 }
             if let facts = facts(for: ingredient, food: food) {
                 summary.total = summary.total + facts
             } else {
@@ -52,18 +58,22 @@ enum NutritionCalculator {
         return summary
     }
 
+    /// Guarda a cópia dos valores nos ingredientes ligados que ainda não a têm (receitas de versões anteriores).
+    static func fillMissingSnapshots(_ ingredients: [Ingredient], foods: [UUID: Food]) -> [Ingredient] {
+        ingredients.map { ingredient in
+            guard ingredient.snapshot == nil, let id = ingredient.foodID, let food = foods[id] else { return ingredient }
+            var filled = ingredient
+            filled.snapshot = FoodSnapshot(food: food)
+            return filled
+        }
+    }
+
     /// Atualiza os valores por porção guardados na receita (usados nos cartões, filtros e ordenação).
     /// Receitas antigas sem ingredientes ligados mantêm os valores introduzidos à mão.
     static func update(_ recipe: Recipe, foods: [UUID: Food]) {
-        var ingredients = recipe.ingredients
-        var renamed = false
-        for index in ingredients.indices {
-            if let id = ingredients[index].foodID, let food = foods[id], ingredients[index].name != food.name {
-                ingredients[index].name = food.name
-                renamed = true
-            }
-        }
-        if renamed { recipe.ingredients = ingredients }
+        let original = recipe.ingredients
+        let ingredients = fillMissingSnapshots(original, foods: foods)
+        if ingredients != original { recipe.ingredients = ingredients }
 
         let summary = summarize(ingredients, foods: foods)
         guard summary.linked > 0 || recipe.nutritionIsComputed else { return }
@@ -71,14 +81,44 @@ enum NutritionCalculator {
         recipe.nutritionIsComputed = true
     }
 
-    /// Recalcula todas as receitas; chamado quando um alimento é editado ou apagado.
+    // MARK: - Alterações a alimentos
+
+    /// Ingredientes que usam valores diferentes dos atuais do alimento.
+    static func isOutdated(_ ingredient: Ingredient, comparedTo food: Food) -> Bool {
+        ingredient.foodID == food.id && ingredient.snapshot != FoodSnapshot(food: food)
+    }
+
+    /// Receitas com pelo menos um ingrediente deste alimento com valores anteriores.
+    static func recipesAffected(by food: Food, in recipes: [Recipe]) -> [Recipe] {
+        recipes.filter { recipe in recipe.ingredients.contains { isOutdated($0, comparedTo: food) } }
+    }
+
+    /// Ingredientes da receita com os valores atuais do alimento.
+    static func ingredientsUpdated(_ ingredients: [Ingredient], with food: Food) -> [Ingredient] {
+        ingredients.map { ingredient in
+            guard ingredient.foodID == food.id else { return ingredient }
+            var updated = ingredient
+            updated.name = food.name
+            updated.snapshot = FoodSnapshot(food: food)
+            return updated
+        }
+    }
+
+    /// Valores por porção que a receita teria com os valores atuais do alimento (para pré-visualizar).
+    static func preview(_ recipe: Recipe, with food: Food) -> Summary {
+        let ingredients = ingredientsUpdated(recipe.ingredients, with: food)
+        var summary = summarize(ingredients, foods: [:])
+        summary.total = summary.total.scaled(by: 1 / Double(max(1, recipe.servings)))
+        return summary
+    }
+
+    /// Aplica os valores atuais do alimento às receitas escolhidas pelo utilizador.
     @MainActor
-    static func refreshAllRecipes(in context: ModelContext) {
-        let foods = (try? context.fetch(FetchDescriptor<Food>())) ?? []
-        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
-        let foodIndex = index(foods)
-        for recipe in recipes where recipe.nutritionIsComputed || recipe.ingredients.contains(where: { $0.foodID != nil }) {
-            update(recipe, foods: foodIndex)
+    static func apply(_ food: Food, to recipes: [Recipe], context: ModelContext) {
+        for recipe in recipes {
+            recipe.ingredients = ingredientsUpdated(recipe.ingredients, with: food)
+            update(recipe, foods: [:])
+            recipe.updatedAt = .now
         }
         try? context.save()
     }

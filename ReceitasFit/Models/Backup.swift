@@ -38,12 +38,18 @@ struct RecipeBackup: Codable {
             context.insert(dto.makeFood())
             result.foods += 1
         }
+        try context.save()
+        // Cópias antigas não têm os valores guardados nos ingredientes: usa os dos alimentos importados.
+        let foodIndex = NutritionCalculator.index((try? context.fetch(FetchDescriptor<Food>())) ?? [])
         for dto in backup.recipes where !existingRecipes.contains(dto.id) {
-            context.insert(dto.makeRecipe())
+            let recipe = dto.makeRecipe()
+            if recipe.ingredients.contains(where: { $0.foodID != nil && $0.snapshot == nil }) {
+                NutritionCalculator.update(recipe, foods: foodIndex)
+            }
+            context.insert(recipe)
             result.recipes += 1
         }
         try context.save()
-        NutritionCalculator.refreshAllRecipes(in: context)
         return result
     }
 }

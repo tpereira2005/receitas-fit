@@ -55,7 +55,7 @@ struct RootView: View {
             }
         }
         if dataVersion < DataMigration.currentVersion {
-            DataMigration.migrateToV2(context)
+            DataMigration.migrate(context, from: dataVersion)
             dataVersion = DataMigration.currentVersion
         }
     }

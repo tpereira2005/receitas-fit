@@ -93,6 +93,8 @@ struct IngredientQuantityView: View {
 
     private let ingredientID: UUID
     private let units: [IngredientUnit]
+    /// Valores já guardados na receita para este alimento; mantêm-se ao mudar só a quantidade.
+    private let keptSnapshot: FoodSnapshot?
     @State private var amount: Double?
     @State private var unit: IngredientUnit
     @FocusState private var amountFocused: Bool
@@ -106,6 +108,7 @@ struct IngredientQuantityView: View {
         self.units = units
         let initialUnit = initial.flatMap { IngredientUnit(rawValue: $0.unit) }.flatMap { units.contains($0) ? $0 : nil } ?? units[0]
         ingredientID = initial?.id ?? UUID()
+        keptSnapshot = initial?.foodID == food.id ? initial?.snapshot : nil
         _unit = State(initialValue: initialUnit)
         _amount = State(initialValue: initial?.amount ?? (initialUnit == .unit ? 1 : 100))
     }
@@ -113,11 +116,16 @@ struct IngredientQuantityView: View {
     private var ingredient: Ingredient {
         Ingredient(
             id: ingredientID,
-            name: food.name,
+            name: keptSnapshot?.name ?? food.name,
             amount: unit == .toTaste ? nil : amount,
             unit: unit.rawValue,
-            foodID: food.id
+            foodID: food.id,
+            snapshot: keptSnapshot ?? FoodSnapshot(food: food)
         )
+    }
+
+    private var usesPreviousValues: Bool {
+        keptSnapshot != nil && keptSnapshot != FoodSnapshot(food: food)
     }
 
     private var canConfirm: Bool { unit == .toTaste || (amount ?? 0) > 0 }
@@ -145,6 +153,10 @@ struct IngredientQuantityView: View {
                     }
                 }
                 .padding(.vertical, 4)
+            } footer: {
+                if usesPreviousValues {
+                    Label("Esta receita usa valores anteriores deste alimento. Para os atualizar, usa “Usar valores atuais” na lista de ingredientes.", systemImage: "clock.arrow.circlepath")
+                }
             }
 
             Section {

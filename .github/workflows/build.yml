@@ -176,6 +176,7 @@ jobs:
           shot 6-editor -screenshotEditFirst YES -screenshotEditorIngredients YES
           shot 7-receita-nutricao -screenshotOpenFirst YES -screenshotDetailScroll YES
           shot 8-explorar -tab explore
+          shot 12-rever-receitas -tab foods -screenshotOpenFood YES -screenshotFoodReview YES
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES

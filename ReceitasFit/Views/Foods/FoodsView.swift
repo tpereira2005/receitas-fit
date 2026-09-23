@@ -95,13 +95,12 @@ struct FoodsView: View {
         let count = recipes.filter { $0.ingredients.contains { $0.foodID == food.id } }.count
         guard count > 0 else { return "“\(food.name)” será apagado da biblioteca." }
         let recipesText = count == 1 ? "1 receita" : "\(count) receitas"
-        return "“\(food.name)” é usado em \(recipesText). Nessas receitas, este ingrediente deixa de contar para os valores nutricionais."
+        return "“\(food.name)” é usado em \(recipesText). Essas receitas mantêm os valores atuais deste ingrediente."
     }
 
     private func delete(_ food: Food) {
         context.delete(food)
         try? context.save()
-        NutritionCalculator.refreshAllRecipes(in: context)
     }
 
     private func handleScreenshotArguments() {

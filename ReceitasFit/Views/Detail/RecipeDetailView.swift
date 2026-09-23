@@ -253,7 +253,7 @@ struct RecipeDetailView: View {
                     .font(.title3)
                     .foregroundStyle(checked ? Color.accentColor : Color.secondary)
                     .contentTransition(.symbolEffect(.replace))
-                ingredientText(ingredient, name: food?.name ?? ingredient.name)
+                ingredientText(ingredient, name: ingredient.name)
                     .strikethrough(checked)
                     .foregroundStyle(checked ? Color.secondary : Color.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
