@@ -48,6 +48,7 @@ struct SearchView: View {
             }
             .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Pesquisar")
+            .searchable(text: $searchText, prompt: "Receitas, ingredientes, etiquetas…")
             .recipeDestinations(namespace)
         }
     }

@@ -38,7 +38,6 @@ struct RootView: View {
                 SearchView(searchText: $searchText)
             }
         }
-        .searchable(text: $searchText, prompt: "Receitas, ingredientes, etiquetas…")
         .tabBarMinimizeBehavior(.onScrollDown)
         .task { seedIfNeeded() }
     }

@@ -298,9 +298,9 @@ struct RecipeDetailView: View {
                 withAnimation(.snappy) { recipe.isFavorite.toggle() }
             } label: {
                 Label(recipe.isFavorite ? "Remover das favoritas" : "Favorita", systemImage: recipe.isFavorite ? "heart.fill" : "heart")
-                    .foregroundStyle(recipe.isFavorite ? Color.pink : Color.primary)
                     .symbolEffect(.bounce, value: recipe.isFavorite)
             }
+            .tint(recipe.isFavorite ? Color.pink : Color.primary)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
