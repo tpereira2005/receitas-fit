@@ -15,11 +15,8 @@ struct HomeView: View {
     private let tileColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     private var recentlyCooked: [Recipe] {
-        recipes
-            .filter { $0.lastCookedAt != nil }
-            .sorted { ($0.lastCookedAt ?? .distantPast) > ($1.lastCookedAt ?? .distantPast) }
-            .prefix(10)
-            .map { $0 }
+        let cooked = recipes.filter { $0.lastCookedAt != nil }
+        return Array(RecipeSort.recentlyCooked.sorted(cooked).prefix(10))
     }
 
     private var favorites: [Recipe] {

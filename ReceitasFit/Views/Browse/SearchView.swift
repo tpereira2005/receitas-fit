@@ -15,12 +15,23 @@ struct SearchView: View {
     private var query: String { searchText.trimmed }
     private var isIdle: Bool { query.isEmpty && filters.isEmpty }
 
+    private struct Scored {
+        let recipe: Recipe
+        let score: Int
+    }
+
     private var recipeResults: [Recipe] {
-        recipes
-            .filter { recipe in filters.allSatisfy { $0.matches(recipe) } }
-            .compactMap { recipe in recipe.searchScore(query).map { (recipe, $0) } }
-            .sorted { $0.1 == $1.1 ? $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending : $0.1 > $1.1 }
-            .map(\.0)
+        var scored: [Scored] = []
+        for recipe in recipes where filters.allSatisfy({ $0.matches(recipe) }) {
+            if let score = recipe.searchScore(query) {
+                scored.append(Scored(recipe: recipe, score: score))
+            }
+        }
+        scored.sort { a, b in
+            if a.score != b.score { return a.score > b.score }
+            return a.recipe.title.localizedStandardCompare(b.recipe.title) == .orderedAscending
+        }
+        return scored.map(\.recipe)
     }
 
     private var foodResults: [Food] {
