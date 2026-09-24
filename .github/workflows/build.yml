@@ -242,10 +242,14 @@ jobs:
           shot 7-receita-nutricao -screenshotOpenFirst YES -screenshotDetailScroll YES
           shot 8-explorar -tab explore
           shot 12-rever-receitas -tab foods -screenshotOpenFood YES -screenshotFoodReview YES
+          shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready
+          shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed
+          shot 15-copias-desativadas -screenshotSettings YES -screenshotBackupState off
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES
           shot 11-receita-nutricao-escuro -screenshotOpenFirst YES -screenshotDetailScroll YES
+          shot 16-copias-escuro -screenshotSettings YES -screenshotBackupState ready
 
       - uses: actions/upload-artifact@v5
         with:

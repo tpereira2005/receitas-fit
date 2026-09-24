@@ -130,6 +130,9 @@ struct HomeView: View {
         if ScreenshotMode.flag("screenshotEditFirst"), screenshotEditRecipe == nil, let first = filtered.first {
             screenshotEditRecipe = first
         }
+        if ScreenshotMode.flag("screenshotSettings") {
+            showingSettings = true
+        }
     }
 }
 

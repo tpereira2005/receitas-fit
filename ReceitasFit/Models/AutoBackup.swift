@@ -32,12 +32,22 @@ final class AutoBackup {
     private(set) var lastError: String?
     private(set) var isRunning = false
 
-    var isEnabled: Bool { defaults.data(forKey: Keys.bookmark) != nil }
+    var isEnabled: Bool { previewEnabled || defaults.data(forKey: Keys.bookmark) != nil }
+
+    /// Estado simulado para as capturas de ecrã do CI (só em builds de desenvolvimento).
+    private var previewEnabled = false
 
     private init() {
         folderName = defaults.string(forKey: Keys.folderName)
         lastDate = defaults.object(forKey: Keys.lastDate) as? Date
         lastError = defaults.string(forKey: Keys.lastError)
+
+        if let state = ScreenshotMode.string("screenshotBackupState") {
+            folderName = state == "off" ? nil : "Receitas"
+            previewEnabled = state != "off"
+            lastDate = .now.addingTimeInterval(-2 * 60 * 60)
+            lastError = state == "failed" ? "Já não é possível aceder à pasta escolhida. Escolhe-a outra vez." : nil
+        }
     }
 
     // MARK: - Pasta
@@ -61,6 +71,7 @@ final class AutoBackup {
         }
         folderName = nil
         lastError = nil
+        previewEnabled = false
     }
 
     // MARK: - Cópias
