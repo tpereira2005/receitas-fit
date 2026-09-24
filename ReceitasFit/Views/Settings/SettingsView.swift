@@ -54,6 +54,8 @@ struct SettingsView: View {
                     Text("Exporta um ficheiro quando quiseres, por exemplo antes de mudar de iPhone. A importação só acrescenta o que ainda não existe na app.")
                 }
 
+                GeminiKeySection()
+
                 Section {
                     Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
                         let count = SampleData.insert(into: context)

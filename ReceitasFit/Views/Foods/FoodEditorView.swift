@@ -233,6 +233,34 @@ struct FoodEditorView: View {
                 .font(.subheadline)
             }
 
+            let lessThan = Nutrient.allCases.filter { reading.lessThan.contains($0) }
+            if !lessThan.isEmpty {
+                Label {
+                    Text("No rótulo com “<”: \(lessThan.map { "\($0.title.lowercased()) <\((reading.draft.facts[keyPath: $0.keyPath]).cleanString) g" }.formatted(.list(type: .and))). Ficou o valor indicado; podes pôr 0 se preferires.")
+                } icon: {
+                    Image(systemName: "lessthan.circle.fill").foregroundStyle(.secondary)
+                }
+                .font(.subheadline)
+            }
+
+            if let portion = reading.labelPortion {
+                Label {
+                    Text("Porção do rótulo acrescentada: 1 \(portion.name) = \(portion.grams.cleanString) \(reading.draft.base.rawValue).")
+                } icon: {
+                    Image(systemName: "scalemass.fill").foregroundStyle(Color.accentColor)
+                }
+                .font(.subheadline)
+            }
+
+            if !reading.notes.isEmpty {
+                Label {
+                    Text(reading.notes)
+                } icon: {
+                    Image(systemName: "text.bubble.fill").foregroundStyle(.secondary)
+                }
+                .font(.subheadline)
+            }
+
             if !reading.recognizedRows.isEmpty {
                 DisclosureGroup("Texto lido", isExpanded: $showsRecognizedText) {
                     Text(reading.recognizedRows.map { $0.joined(separator: "  ·  ") }.joined(separator: "\n"))
@@ -245,7 +273,7 @@ struct FoodEditorView: View {
         } header: {
             Text("Leitura da embalagem")
         } footer: {
-            Text("Confirma cada valor com a embalagem. Nada fica guardado até tocares em Guardar; as fotografias e o código de barras não são guardados.")
+            Text("Confirma cada valor com a embalagem. Nada fica guardado até tocares em Guardar; as fotografias e o código de barras não são guardados na app.")
         }
     }
 
@@ -254,6 +282,17 @@ struct FoodEditorView: View {
         let fromLabel = reading.sources.values.filter { $0 == .label }.count
         let fromDatabase = reading.sources.values.filter { $0 == .openFoodFacts }.count
         VStack(alignment: .leading, spacing: 8) {
+            Label {
+                switch reading.reader {
+                case .gemini:
+                    Text("Lido com o Gemini")
+                case .device(let reason):
+                    Text(reason.map { "Lido no iPhone · \($0)" } ?? "Lido no iPhone")
+                }
+            } icon: {
+                Image(systemName: reading.reader == .gemini ? "sparkles" : "iphone")
+                    .foregroundStyle(reading.reader == .gemini ? Color.accentColor : .orange)
+            }
             Label {
                 Text(fromLabel > 0
                      ? "Rótulo: \(fromLabel) de \(Nutrient.allCases.count) valores lidos"

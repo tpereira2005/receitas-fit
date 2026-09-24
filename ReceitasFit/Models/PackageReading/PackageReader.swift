@@ -59,6 +59,14 @@ enum PackageReader {
         return PhotoResult(rows: rows(from: boxes), barcodes: barcodes, boxes: boxes)
     }
 
+    /// Só os códigos de barras (rápido; usado quando o texto é lido pelo Gemini).
+    static func barcodes(in image: UIImage) async -> [String] {
+        guard let cgImage = prepared(image) else { return [] }
+        var request = DetectBarcodesRequest()
+        request.symbologies = [.ean13, .ean8, .upce]
+        return (try? await request.perform(on: cgImage))?.compactMap(\.payloadString) ?? []
+    }
+
     /// Junta os blocos de texto em filas da tabela, da esquerda para a direita.
     /// Endireita primeiro a fotografia com a inclinação estimada a partir da própria tabela.
     nonisolated static func rows(from boxes: [TextBox]) -> [[String]] {

@@ -26,36 +26,66 @@ struct PackageReading {
         case unavailable
     }
 
+    /// Quem leu o rótulo.
+    enum Reader: Equatable {
+        case gemini
+        /// Leitura no iPhone (Vision); `reason` explica porque não foi usado o Gemini.
+        case device(reason: String?)
+    }
+
     var draft: FoodDraft
     var sources: [Nutrient: Source]
     var conflicts: [Conflict]
     var databaseStatus: DatabaseStatus
-    var photosWithTable: Int
+    var reader: Reader = .device(reason: nil)
+    /// Valores escritos como "<0,5 g" no rótulo (guardados como 0,5).
+    var lessThan: Set<Nutrient> = []
+    /// Porção indicada no rótulo e já acrescentada às porções do alimento.
+    var labelPortion: FoodPortion?
+    /// Observações do Gemini sobre a leitura.
+    var notes = ""
     var photoCount: Int
-    /// Texto reconhecido, fila a fila (para o utilizador perceber o que foi lido).
+    /// Texto reconhecido, fila a fila (só na leitura no iPhone).
     var recognizedRows: [[String]]
 
     var missing: [Nutrient] { Nutrient.allCases.filter { sources[$0] == nil } }
 
     // MARK: - Leitura
 
+    /// Lê com o Gemini se houver chave; sem chave, sem internet ou sem quota, lê no iPhone.
     static func read(photos: [UIImage]) async -> PackageReading {
         var label = PartialFacts()
         var rows: [[String]] = []
         var barcodes: [String] = []
-        var photosWithTable = 0
+        var reader = Reader.gemini
+        var gemini: GeminiReader.Result?
 
-        for photo in photos {
-            guard let result = try? await PackageReader.read(photo) else { continue }
-            barcodes += result.barcodes
-            let parsed = LabelParser.parse(rows: result.rows)
-            if parsed.values.count >= 3 { photosWithTable += 1 }
-            // Se houver várias fotografias da tabela, fica a leitura mais completa de cada nutriente.
-            for (nutrient, value) in parsed.values where label[nutrient] == nil {
-                label[nutrient] = value
+        do {
+            gemini = try await GeminiReader.read(photos: photos)
+        } catch {
+            let reason = (error as? GeminiReader.ReadError)?.message ?? error.localizedDescription
+            reader = .device(reason: reason)
+        }
+
+        if let gemini {
+            label = gemini.facts
+            if let barcode = gemini.barcode { barcodes.append(barcode) }
+            for photo in photos where barcodes.isEmpty {
+                barcodes += await PackageReader.barcodes(in: photo)
             }
-            if label.base == nil { label.base = parsed.base }
-            rows += result.rows
+        } else {
+            for photo in photos {
+                guard let result = try? await PackageReader.read(photo) else { continue }
+                barcodes += result.barcodes
+                let parsed = LabelParser.parse(rows: result.rows)
+                // Se houver várias fotografias da tabela, fica a primeira leitura de cada nutriente.
+                for (nutrient, value) in parsed.values where label[nutrient] == nil {
+                    label[nutrient] = value
+                    if parsed.lessThan.contains(nutrient) { label.lessThan.insert(nutrient) }
+                }
+                if label.base == nil { label.base = parsed.base }
+                rows += result.rows
+            }
         }
 
         var product: OpenFoodFacts.Product?
@@ -72,16 +102,16 @@ struct PackageReading {
             }
         }
 
-        var reading = merge(label: label, product: product)
+        var reading = merge(label: label, product: product, gemini: gemini)
         reading.databaseStatus = status
-        reading.photosWithTable = photosWithTable
+        reading.reader = reader
         reading.photoCount = photos.count
         reading.recognizedRows = rows
         return reading
     }
 
-    /// Junta o rótulo e o Open Food Facts (separado da leitura para poder ser testado).
-    static func merge(label: PartialFacts, product: OpenFoodFacts.Product?) -> PackageReading {
+    /// Junta o rótulo, o Open Food Facts e os dados extra do Gemini (separado da leitura para poder ser testado).
+    static func merge(label: PartialFacts, product: OpenFoodFacts.Product?, gemini: GeminiReader.Result? = nil) -> PackageReading {
         var draft = FoodDraft()
         var sources: [Nutrient: Source] = [:]
         var conflicts: [Conflict] = []
@@ -100,18 +130,28 @@ struct PackageReading {
                 sources[nutrient] = .openFoodFacts
             }
         }
-        if let product {
-            draft.name = product.name
-            draft.brand = product.brand
-        }
+        // Nome e marca: os da frente da embalagem (Gemini) ou, se faltarem, os do Open Food Facts.
+        draft.name = [gemini?.name, product?.name].compactMap { $0 }.first { !$0.isEmpty } ?? ""
+        draft.brand = [gemini?.brand, product?.brand].compactMap { $0 }.first { !$0.isEmpty } ?? ""
         draft.base = label.base ?? product?.facts.base ?? .grams
+
+        // A porção do rótulo ("1 dose = 30 g") entra logo nas porções do alimento; revê-se no editor.
+        var labelPortion: FoodPortion?
+        if let grams = gemini?.servingGrams {
+            let name = gemini?.servingName.map { $0.lowercased() } ?? "porção"
+            let portion = FoodPortion(name: name, grams: grams)
+            labelPortion = portion
+            draft.portions = [portion]
+        }
 
         return PackageReading(
             draft: draft,
             sources: sources,
             conflicts: conflicts,
             databaseStatus: product.map { .found(name: $0.name) } ?? .noBarcode,
-            photosWithTable: 0,
+            lessThan: label.lessThan.filter { sources[$0] == .label },
+            labelPortion: labelPortion,
+            notes: gemini?.notes ?? "",
             photoCount: 0,
             recognizedRows: []
         )

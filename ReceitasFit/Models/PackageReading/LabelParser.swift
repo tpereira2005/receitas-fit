@@ -39,6 +39,8 @@ nonisolated enum Nutrient: String, CaseIterable, Identifiable, Sendable {
 nonisolated struct PartialFacts: Equatable, Sendable {
     var values: [Nutrient: Double] = [:]
     var base: MeasureBase?
+    /// Valores escritos no rótulo como "<0,5 g": guarda-se o limite (0,5) e avisa-se na revisão.
+    var lessThan: Set<Nutrient> = []
 
     subscript(_ nutrient: Nutrient) -> Double? {
         get { values[nutrient] }
@@ -98,15 +100,16 @@ nonisolated enum LabelParser {
                 }
                 continue
             }
-            if let value = firstValue(in: cells, from: labelCell, labelEnd: labelEnd) {
-                result[nutrient] = value
+            if let found = firstValue(in: cells, from: labelCell, labelEnd: labelEnd) {
+                result[nutrient] = found.value
+                if found.lessThan { result.lessThan.insert(nutrient) }
             }
         }
 
         // Nome ilegível (p. ex. "Fibra" lida como "-ОГa"): a ordem da declaração europeia é fixa,
         // por isso uma única fila com valores entre os açúcares e as proteínas só pode ser a fibra,
         // e uma logo a seguir às proteínas só pode ser o sal.
-        func valueOfSingleRow(after start: Int?, before end: Int?) -> Double? {
+        func valueOfSingleRow(after start: Int?, before end: Int?) -> (value: Double, lessThan: Bool)? {
             guard let start, let end else { return nil }
             let candidates = unlabeled.filter { $0 > start && $0 < end }
             guard candidates.count == 1 else { return nil }
@@ -114,12 +117,14 @@ nonisolated enum LabelParser {
             guard let firstCell = cells.first else { return nil }
             return firstValue(in: cells, from: 0, labelEnd: firstCell.startIndex)
         }
-        if result[.fiber] == nil, let value = valueOfSingleRow(after: rowOf[.sugars] ?? rowOf[.carbs], before: rowOf[.protein]) {
-            result[.fiber] = value
+        if result[.fiber] == nil, let found = valueOfSingleRow(after: rowOf[.sugars] ?? rowOf[.carbs], before: rowOf[.protein]) {
+            result[.fiber] = found.value
+            if found.lessThan { result.lessThan.insert(.fiber) }
         }
         if result[.salt] == nil, let protein = rowOf[.protein],
-           let value = valueOfSingleRow(after: protein, before: protein + 2) {
-            result[.salt] = value
+           let found = valueOfSingleRow(after: protein, before: protein + 2) {
+            result[.salt] = found.value
+            if found.lessThan { result.lessThan.insert(.salt) }
         }
         return result
     }
@@ -189,12 +194,11 @@ nonisolated enum LabelParser {
         return [rest] + cells.dropFirst(labelCell + 1)
     }
 
-    private static func firstValue(in cells: [String], from labelCell: Int, labelEnd: String.Index) -> Double? {
+    /// Primeiro valor em gramas; `lessThan` indica um valor escrito como "<0,5 g" (fica 0,5).
+    private static func firstValue(in cells: [String], from labelCell: Int, labelEnd: String.Index) -> (value: Double, lessThan: Bool)? {
         for cell in valueCells(cells, from: labelCell, labelEnd: labelEnd) {
             for number in numbers(in: cell) where number.unit != "%" && number.unit != "kj" && number.unit != "kcal" {
-                // "<0,5 g" significa quantidade desprezável.
-                if number.lessThan { return 0 }
-                return number.unit == "mg" ? number.value / 1000 : number.value
+                return (number.unit == "mg" ? number.value / 1000 : number.value, number.lessThan)
             }
         }
         return nil

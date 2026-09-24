@@ -65,7 +65,8 @@ struct PackageReadingTests {
         let facts = LabelParser.parse(rows: rows)
         #expect(facts.base == .milliliters)
         #expect(facts[.calories] == 45)  // 188 / 4,184
-        #expect(facts[.fiber] == 0)
+        #expect(facts[.fiber] == 0.5)
+        #expect(facts.lessThan == [.fiber])
         #expect(close(facts[.salt], 0.13))
     }
 
@@ -78,7 +79,8 @@ struct PackageReadingTests {
             ["Sal", "0,13 g", "0,33 g"],
         ]
         let facts = LabelParser.parse(rows: rows)
-        #expect(facts[.fiber] == 0)
+        #expect(facts[.fiber] == 0.5)
+        #expect(facts.lessThan.contains(.fiber))
         #expect(facts[.protein] == 1.9)
     }
 
@@ -148,6 +150,56 @@ struct PackageReadingTests {
         #expect(reading.draft.name == "Aveia")
     }
 
+    // MARK: - Gemini
+
+    @Test func geminiRequestHasImagesAndSchema() throws {
+        let body = GeminiReader.requestBody(images: [Data([1, 2, 3])])
+        let json = try #require(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let contents = try #require(json["contents"] as? [[String: Any]])
+        let parts = try #require(contents.first?["parts"] as? [[String: Any]])
+        let image = try #require(parts.first?["inline_data"] as? [String: Any])
+        #expect(image["mime_type"] as? String == "image/jpeg")
+        #expect(image["data"] as? String == Data([1, 2, 3]).base64EncodedString())
+        let config = try #require(json["generationConfig"] as? [String: Any])
+        #expect(config["responseMimeType"] as? String == "application/json")
+        #expect(config["responseSchema"] != nil)
+    }
+
+    @Test func parsesGeminiAnswer() throws {
+        let answer = """
+        {"nome": "Iogurte Grego Natural", "marca": "Marca", "base": "100g", "energia_kcal": 97,
+         "lipidos": 0.4, "saturados": 0.1, "hidratos": 3.6, "acucares": 3.6, "fibra": 0.5, "proteina": 10,
+         "sal": 0.1, "menor_que": ["fibra"], "porcao_nome": "Iogurte", "porcao_gramas": 170,
+         "codigo_barras": "5601234567890", "notas": ""}
+        """
+        let envelope: [String: Any] = ["candidates": [["content": ["parts": [["text": answer]]]]]]
+        let data = try JSONSerialization.data(withJSONObject: envelope)
+        let result = try #require(GeminiReader.parse(response: data))
+        #expect(result.name == "Iogurte Grego Natural")
+        #expect(result.facts[.calories] == 97)
+        #expect(result.facts[.protein] == 10)
+        #expect(result.facts.lessThan == [.fiber])
+        #expect(result.servingGrams == 170)
+        #expect(result.barcode == "5601234567890")
+
+        let reading = PackageReading.merge(label: result.facts, product: nil, gemini: result)
+        #expect(reading.draft.name == "Iogurte Grego Natural")
+        #expect(reading.draft.portions.first?.name == "iogurte")
+        #expect(reading.draft.portions.first?.grams == 170)
+        #expect(reading.lessThan == [.fiber])
+        #expect(reading.draft.facts.fiber == 0.5)
+    }
+
+    @Test func geminiNullsAreMissingNotZero() throws {
+        let answer = #"{"nome": "", "marca": "", "base": "100ml", "energia_kcal": 45, "lipidos": null, "menor_que": [], "notas": "Tabela desfocada"}"#
+        let envelope: [String: Any] = ["candidates": [["content": ["parts": [["text": answer]]]]]]
+        let result = try #require(GeminiReader.parse(response: try JSONSerialization.data(withJSONObject: envelope)))
+        #expect(result.facts.base == .milliliters)
+        #expect(result.facts[.fat] == nil)
+        #expect(result.notes == "Tabela desfocada")
+        #expect(result.barcode == nil)
+    }
+
     // MARK: - Fotografias reais (Vision no simulador)
 
     /// Guarda o que o Vision leu num ficheiro no Mac do CI (o simulador escreve na pasta do utilizador
@@ -206,7 +258,7 @@ struct PackageReadingTests {
         #expect(facts[.calories] == 45, "\(text)")
         #expect(facts[.fat] == 1.5, "\(text)")
         #expect(facts[.carbs] == 5.9, "\(text)")
-        #expect(facts[.fiber] == 0, "\(text)")
+        #expect(facts[.fiber] == 0.5, "\(text)")
         #expect(facts[.protein] == 1.9, "\(text)")
         #expect(facts[.salt] == 0.13, "\(text)")
     }

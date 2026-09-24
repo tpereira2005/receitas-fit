@@ -72,7 +72,9 @@ struct PackageScanView: View {
                     }
                     .disabled(remaining == 0)
                 } footer: {
-                    Text("As fotografias são lidas neste iPhone e não são guardadas. Só o código de barras é enviado ao Open Food Facts, para completar o que faltar. No fim revês tudo antes de guardar.")
+                    Text(GeminiReader.apiKey != nil
+                         ? "As fotografias são enviadas ao Gemini para ler a tabela e não são guardadas na app. O código de barras é usado no Open Food Facts para completar o que faltar. No fim revês tudo antes de guardar."
+                         : "Sem chave do Gemini nas Definições, as fotografias são lidas neste iPhone, com menos precisão. O código de barras é usado no Open Food Facts para completar o que faltar. No fim revês tudo antes de guardar.")
                 }
             }
             .navigationTitle("Ler embalagem")
@@ -142,18 +144,21 @@ struct PackageScanView: View {
         var label = PartialFacts()
         label.base = .grams
         for (nutrient, value) in [(Nutrient.calories, 383.0), (.fat, 5.6), (.saturatedFat, 3.4), (.carbs, 6.2),
-                                  (.sugars, 4.1), (.protein, 76), (.salt, 0.48)] {
+                                  (.sugars, 4.1), (.fiber, 0.5), (.protein, 76), (.salt, 0.48)] {
             label[nutrient] = value
         }
+        label.lessThan = [.fiber]
         var database = PartialFacts()
-        database[.calories] = 383
-        database[.protein] = 80
+        database[.calories] = 405
+        database[.protein] = 76
+        let gemini = GeminiReader.Result(name: "Whey Protein Baunilha", brand: "Marca", facts: label,
+                                         servingName: "dose", servingGrams: 30, barcode: nil, notes: "")
         var reading = PackageReading.merge(
             label: label,
-            product: OpenFoodFacts.Product(name: "Whey Protein Baunilha", brand: "Marca", facts: database)
+            product: OpenFoodFacts.Product(name: "Whey Protein", brand: "Marca", facts: database),
+            gemini: gemini
         )
-        reading.recognizedRows = [["Energia / Energy", "1620 kJ", "486 kJ"], ["383 kcal", "115 kcal", "6%"],
-                                  ["Proteínas / Protein", "76 g", "23 g", "46%"]]
+        reading.reader = .gemini
         return reading
     }
 
