@@ -101,7 +101,8 @@ struct DataTests {
         SampleData.insert(into: context)
         let samples = try context.fetch(FetchDescriptor<Recipe>())
         #expect(!samples.isEmpty)
-        #expect(samples.allSatisfy(\.isSample))
+        let allMarked = samples.allSatisfy { $0.isSample }
+        #expect(allMarked)
 
         let old = Recipe(title: "Bowl de frango teriyaki")
         let mine = Recipe(title: "A minha receita")
