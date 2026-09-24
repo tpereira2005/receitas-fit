@@ -74,20 +74,22 @@ struct RecipeShareCard: View {
     private var story: some View {
         VStack(spacing: 0) {
             photo
-                .frame(height: 360)
+                .frame(height: 280)
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [.clear, background], startPoint: .top, endPoint: .bottom)
                         .frame(height: 90)
                 }
                 .clipped()
 
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 categoryChip
                 Text(content.title)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(3)
                     .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
                 macroGrid
                 if !facts.isEmpty {
                     Text(details)
@@ -98,8 +100,8 @@ struct RecipeShareCard: View {
                 footer(light: true)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 6)
-            .padding(.bottom, 26)
+            .padding(.top, 4)
+            .padding(.bottom, 22)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .background(background)
@@ -115,7 +117,8 @@ struct RecipeShareCard: View {
         if let image = content.photo {
             FocusedImage(image: image, focus: content.focus)
         } else {
-            RecipePlaceholder(category: content.category, symbolSize: 80)
+            // Sem fotografia: o ícone da categoria fica na parte de cima, longe do título.
+            RecipePlaceholder(category: content.category, symbolSize: 64, alignment: format == .square ? .top : .center)
         }
     }
 
@@ -204,12 +207,13 @@ struct RecipeShareCard: View {
                     .foregroundStyle(.white.opacity(0.7))
             }
             Text(macro.value)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
         .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 

@@ -42,12 +42,6 @@ struct PhotoFocusEditor: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Centrar", systemImage: "scope") {
-                        withAnimation(.snappy) { focus = .center }
-                    }
-                    .disabled(focus == .center)
-                }
             }
         }
     }
@@ -79,13 +73,20 @@ struct PhotoFocusEditor: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .frame(maxHeight: 420)
-                .sensoryFeedback(.selection, trigger: focus == .center)
+                .frame(maxHeight: 400)
 
-            Text("Arrasta o círculo para a parte mais importante da fotografia.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Arrasta o círculo para a parte mais importante da fotografia.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Button("Centrar", systemImage: "scope") {
+                    withAnimation(.snappy) { focus = .center }
+                }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.glass)
+                .disabled(focus == .center)
+            }
         }
     }
 
@@ -108,14 +109,13 @@ struct PhotoFocusEditor: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Como fica na app")
                 .font(.headline)
-            HStack(alignment: .top, spacing: 12) {
-                preview("Cartão", aspect: 0.82, radius: 18)
-                    .frame(width: 104)
-                VStack(spacing: 12) {
-                    preview("Recentes", aspect: 1.5, radius: 18)
-                    preview("Receita", aspect: 1.9, radius: 14)
-                }
+            // Recortes com as proporções reais, em tamanho pequeno e à mesma altura.
+            HStack(alignment: .top, spacing: 10) {
+                preview("Cartão", aspect: 0.82, radius: 14)
+                preview("Recentes", aspect: 1.45, radius: 14)
+                preview("Receita", aspect: 1.9, radius: 12)
             }
+            .frame(height: 98)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -141,7 +141,7 @@ struct PhotoFocusEditor: View {
     private func preview(_ title: String, aspect: CGFloat, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Color.clear
-                .aspectRatio(aspect, contentMode: .fit)
+                .frame(width: 76 * aspect, height: 76)
                 .overlay { FocusedImage(image: image, focus: focus) }
                 .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
                 .animation(.snappy, value: focus)

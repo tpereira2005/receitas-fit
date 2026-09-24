@@ -65,6 +65,8 @@ extension Recipe {
 struct RecipePlaceholder: View {
     let category: RecipeCategory
     var symbolSize: CGFloat = 40
+    /// `.top` põe o ícone no primeiro terço (quando há texto por cima, em baixo).
+    var alignment: VerticalAlignment = .center
 
     @ViewBuilder
     private var glyph: some View {
@@ -85,6 +87,8 @@ struct RecipePlaceholder: View {
             glyph
                 .foregroundStyle(.white.opacity(0.9))
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                .frame(maxHeight: .infinity, alignment: alignment == .top ? .top : .center)
+                .padding(.top, alignment == .top ? symbolSize * 1.1 : 0)
         }
     }
 }
