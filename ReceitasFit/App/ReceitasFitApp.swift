@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 import SwiftData
 
@@ -6,7 +7,7 @@ struct ReceitasFitApp: App {
     private let container: Result<ModelContainer, Error>
 
     init() {
-        container = Result { try DataStore.makeContainer() }
+        container = DataStore.shared
     }
 
     var body: some Scene {
@@ -31,6 +32,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("didSeedSamples") private var didSeedSamples = false
     @AppStorage("dataVersion") private var dataVersion = 0
+    @AppStorage(WhatsNewView.seenKey) private var whatsNewSeen = 0
+    @State private var showingWhatsNew = false
+    private let router = AppRouter.shared
 
     @State private var selectedTab = AppTab(rawValue: ScreenshotMode.string("tab") ?? "") ?? .home
     @State private var searchText = ScreenshotMode.string("screenshotSearch") ?? ""
@@ -53,16 +57,52 @@ struct RootView: View {
         .tabBarMinimizeBehavior(.onScrollDown)
         .task {
             prepareData()
+            updateSystemIntegration()
+            await ExpiryReminder.reschedule()
             await AutoBackup.shared.runIfDue(context: context)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
+                updateSystemIntegration()
                 Task { await AutoBackup.shared.runIfDue(context: context) }
             }
         }
+        // Tocar numa receita no Spotlight abre-a no Início.
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            if let id = SpotlightIndex.recipeID(from: activity) { router.open(id) }
+        }
+        .onChange(of: router.pendingRecipeID) { _, id in
+            if id != nil { selectedTab = .home }
+        }
+        .sheet(isPresented: $showingWhatsNew) {
+            whatsNewSeen = WhatsNewView.edition
+        } content: {
+            WhatsNewView()
+        }
+    }
+
+    /// Spotlight e parâmetros dos Atalhos/Siri com as receitas atuais.
+    private func updateSystemIntegration() {
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        SpotlightIndex.update(with: recipes)
+        ReceitasShortcuts.updateAppShortcutParameters()
     }
 
     private func prepareData() {
+        // "O que há de novo": só para quem já usava a app (numa instalação nova não há novidades).
+        #if DEBUG
+        // Nas capturas do CI (compilação de desenvolvimento) só aparece quando pedido.
+        let isUpdate = ScreenshotMode.flag("screenshotWhatsNew")
+        #else
+        let isUpdate = didSeedSamples
+        #endif
+        if whatsNewSeen < WhatsNewView.edition {
+            if isUpdate {
+                showingWhatsNew = true
+            } else {
+                whatsNewSeen = WhatsNewView.edition
+            }
+        }
         if !didSeedSamples {
             didSeedSamples = true
             let count = (try? context.fetchCount(FetchDescriptor<Recipe>())) ?? 0

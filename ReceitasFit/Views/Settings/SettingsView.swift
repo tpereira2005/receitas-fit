@@ -16,6 +16,8 @@ struct SettingsView: View {
     private let autoBackup = AutoBackup.shared
     @State private var message: String?
     @State private var confirmRemoveSamples = false
+    @State private var showingWhatsNew = false
+    @AppStorage(ExpiryReminder.enabledKey) private var expiryReminder = false
 
     private var appVersion: String {
         let info = Bundle.main.infoDictionary
@@ -109,8 +111,11 @@ struct SettingsView: View {
                     Text("Os alimentos de origem têm valores médios. Podes editá-los com os valores do rótulo das marcas que usas.")
                 }
 
+                signingSection
+
                 Section("Sobre") {
                     LabeledContent("Versão", value: appVersion)
+                    Button("O que há de novo", systemImage: "sparkles") { showingWhatsNew = true }
                     LabeledContent("Feita com", value: "SwiftUI · SwiftData")
                 }
             }
@@ -149,6 +154,9 @@ struct SettingsView: View {
             } message: {
                 Text("As cópias que já estão na pasta não são apagadas.")
             }
+            .sheet(isPresented: $showingWhatsNew) {
+                WhatsNewView()
+            }
             .confirmationDialog("Remover as receitas de exemplo?", isPresented: $confirmRemoveSamples, titleVisibility: .visible) {
                 Button("Remover", role: .destructive, action: removeSamples)
             } message: {
@@ -166,6 +174,43 @@ struct SettingsView: View {
     }
 
     // MARK: - Cópias automáticas
+
+    // MARK: - SideStore
+
+    @ViewBuilder
+    private var signingSection: some View {
+        Section {
+            if let expiration = AppSigning.expirationDate {
+                LabeledContent("Válida até") {
+                    Text("\(expiration.formatted(date: .abbreviated, time: .omitted)) · \(AppSigning.expiryText)")
+                        .foregroundStyle(AppSigning.isExpiringSoon ? Color.orange : Color.secondary)
+                }
+                Toggle(isOn: Binding(
+                    get: { expiryReminder },
+                    set: { isOn in
+                        if isOn {
+                            Task {
+                                if !(await ExpiryReminder.enable()) {
+                                    message = "Para receberes o aviso, permite as notificações da app Receitas nos Ajustes do iPhone."
+                                }
+                            }
+                        } else {
+                            ExpiryReminder.disable()
+                        }
+                    }
+                )) {
+                    Label("Avisar na véspera", systemImage: "bell.badge")
+                }
+                Button("Abrir SideStore", systemImage: "arrow.up.forward.app") { AppSigning.openSideStore() }
+            } else {
+                LabeledContent("Válida até", value: "sem data (instalação de desenvolvimento)")
+            }
+        } header: {
+            Text("SideStore")
+        } footer: {
+            Text("Com uma conta gratuita, a app tem de ser renovada no SideStore a cada 7 dias. Se expirar, deixa de abrir até a renovares, mas as receitas continuam guardadas.")
+        }
+    }
 
     private func removeSamples() {
         let samples = recipes.filter(\.isSample)

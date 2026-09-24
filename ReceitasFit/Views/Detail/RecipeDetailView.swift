@@ -266,6 +266,17 @@ struct RecipeDetailView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
         .glassEffect(.regular.interactive(), in: .capsule)
+        // Para o VoiceOver é um único controlo ajustável (deslizar para cima/baixo).
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Porções")
+        .accessibilityValue(Format.servings(servings))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: servings = min(99, servings + 1)
+            case .decrement: servings = max(1, servings - 1)
+            @unknown default: break
+            }
+        }
     }
 
     private func ingredientRow(_ ingredient: Ingredient) -> some View {

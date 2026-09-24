@@ -8,23 +8,48 @@ struct RecipePhoto: View {
     var variant: Variant = .thumbnail
     var symbolSize: CGFloat = 40
 
-    var body: some View {
-        if let uiImage = loadImage() {
-            FocusedImage(image: uiImage, focus: recipe.photoFocus)
-        } else {
-            RecipePlaceholder(category: recipe.category, symbolSize: symbolSize)
+    /// Miniatura descodificada em segundo plano (as grelhas não esperam por ela).
+    @State private var loaded: UIImage?
+
+    private var data: Data? {
+        switch variant {
+        case .thumbnail: recipe.thumbnailData ?? recipe.photoData
+        case .full: recipe.photoData ?? recipe.thumbnailData
         }
     }
 
-    private func loadImage() -> UIImage? {
-        let data: Data?
-        switch variant {
-        case .thumbnail: data = recipe.thumbnailData ?? recipe.photoData
-        case .full: data = recipe.photoData ?? recipe.thumbnailData
-        }
+    private var key: String {
+        "\(recipe.id.uuidString)-\(variant.rawValue)-\(recipe.updatedAt.timeIntervalSince1970)"
+    }
+
+    /// Cartões: ~600 px chegam para o maior cartão num ecrã 3×; o topo da receita usa a imagem inteira.
+    private var maxPixelSize: CGFloat? { variant == .thumbnail ? 600 : nil }
+
+    private var image: UIImage? {
         guard let data else { return nil }
-        let key = "\(recipe.id.uuidString)-\(variant.rawValue)-\(recipe.updatedAt.timeIntervalSince1970)"
-        return ImageCache.shared.image(for: key, data: data)
+        if let cached = ImageCache.shared.cached(key) { return cached }
+        // O topo da receita descodifica logo, para a transição de zoom não mostrar o fundo.
+        if variant == .full { return ImageCache.shared.image(for: key, data: data, maxPixelSize: maxPixelSize) }
+        return loaded
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                FocusedImage(image: image, focus: recipe.photoFocus)
+            } else if data != nil {
+                // A carregar: só a cor da categoria, sem ícone (evita um salto quando a foto aparece).
+                Rectangle().fill(recipe.category.color.opacity(0.25))
+            } else {
+                RecipePlaceholder(category: recipe.category, symbolSize: symbolSize)
+            }
+        }
+        .accessibilityHidden(true)
+        .task(id: key) {
+            guard variant == .thumbnail, let data, ImageCache.shared.cached(key) == nil else { return }
+            let image = await ImageCache.shared.load(key, data: data, maxPixelSize: maxPixelSize)
+            withAnimation(.easeOut(duration: 0.15)) { loaded = image }
+        }
     }
 }
 

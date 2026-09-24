@@ -11,6 +11,7 @@ struct HomeView: View {
     @State private var screenshotEditRecipe: Recipe?
     @State private var showingSettings = false
     @Namespace private var namespace
+    private let router = AppRouter.shared
 
     private let tileColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
@@ -64,12 +65,23 @@ struct HomeView: View {
                 SettingsView()
             }
             .onAppear(perform: handleScreenshotArguments)
+            // Receita pedida pelo Spotlight, pelos Atalhos ou pela Siri.
+            .onChange(of: router.pendingRecipeID, initial: true) { _, id in
+                guard let id, let recipe = recipes.first(where: { $0.id == id }) else { return }
+                path = NavigationPath()
+                path.append(RecipeRoute(recipe: recipe, source: "external"))
+                router.pendingRecipeID = nil
+            }
         }
     }
 
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
+                if AppSigning.isExpiringSoon {
+                    expiryBanner
+                }
+
                 recentSection
 
                 if !recentlyCooked.isEmpty {
@@ -134,6 +146,36 @@ struct HomeView: View {
             }
             .padding(.vertical, 8)
         }
+    }
+
+    /// Aviso nos últimos dias antes de a assinatura do SideStore expirar.
+    private var expiryBanner: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("A app expira \(AppSigning.expiryText)")
+                        .font(.headline)
+                    Text("Renova-a no SideStore para continuares a usá-la. As receitas ficam guardadas.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "clock.badge.exclamationmark.fill")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+            }
+            Button {
+                AppSigning.openSideStore()
+            } label: {
+                Label("Abrir SideStore", systemImage: "arrow.up.forward.app")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.orange)
+        }
+        .padding(16)
+        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.horizontal)
     }
 
     /// As receitas acrescentadas mais recentemente, em cartões grandes.
@@ -246,6 +288,8 @@ struct CompactRecipeCard: View {
         }
         .frame(width: 132, alignment: .leading)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(caption.map { "\(recipe.accessibilitySummary), última vez \($0)" } ?? recipe.accessibilitySummary)
     }
 }
 
@@ -283,5 +327,6 @@ struct CategoryChips: View {
             isSelected ? .regular.tint(value?.color ?? Color.accentColor).interactive() : .regular.interactive(),
             in: .capsule
         )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

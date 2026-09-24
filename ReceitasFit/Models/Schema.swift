@@ -92,6 +92,9 @@ nonisolated enum ReceitasMigrationPlan: SchemaMigrationPlan {
 enum DataStore {
     static let schema = Schema(versionedSchema: SchemaV2.self)
 
+    /// O contentor único da app, partilhado pela interface, pelos Atalhos/Siri e pelo Spotlight.
+    static let shared: Result<ModelContainer, Error> = Result { try makeContainer() }
+
     static func makeContainer() throws -> ModelContainer {
         StoreSafety.backupIfVersionChanged()
         return try ModelContainer(

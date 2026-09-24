@@ -91,6 +91,8 @@ struct MacroStrip: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title == "kcal" ? "\(value) calorias" : "\(title): \(value) gramas")
     }
 }
 
@@ -186,7 +188,7 @@ struct FoodIcon: View {
 
     private var customImage: UIImage? {
         guard let imageData else { return nil }
-        if let imageKey { return ImageCache.shared.image(for: imageKey, data: imageData) }
+        if let imageKey { return ImageCache.shared.image(for: imageKey, data: imageData, maxPixelSize: 256) }
         return UIImage(data: imageData)
     }
 

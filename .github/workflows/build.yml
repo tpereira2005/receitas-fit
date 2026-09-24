@@ -20,7 +20,7 @@ env:
   SCHEME: ReceitasFit
   BUNDLE_ID: com.tpereira.receitasfit
   # Versão base; o número da build é acrescentado automaticamente (ex.: 1.1.7).
-  VERSION_BASE: "1.2"
+  VERSION_BASE: "1.3"
 
 jobs:
   tests:
@@ -249,6 +249,8 @@ jobs:
           shot 28-inicio-feitas -screenshotCooked YES
           shot 29-fiz-receita -screenshotCooked YES -screenshotOpenFirst YES -screenshotDetailCooked YES
           shot 30-pesquisa-recentes -tab search
+          shot 31-novidades -screenshotWhatsNew YES
+          shot 32-expira -screenshotExpiryDays 1
           shot 12-rever-receitas -tab foods -screenshotOpenFood YES -screenshotFoodReview YES
           shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready
           shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed

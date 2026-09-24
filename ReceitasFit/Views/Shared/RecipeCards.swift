@@ -58,6 +58,8 @@ struct RecipeCard: View {
             .padding(.horizontal, 4)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(recipe.accessibilitySummary)
     }
 }
 
@@ -98,6 +100,8 @@ struct FeaturedRecipeCard: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .matchedTransitionSource(id: transitionID, in: namespace)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(recipe.accessibilitySummary)
     }
 }
 
@@ -125,8 +129,11 @@ struct RecipeRow: View {
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(recipe.accessibilitySummary)
     }
 }
 
@@ -272,5 +279,19 @@ extension View {
             RecipeDetailView(recipe: route.recipe)
                 .navigationTransition(.zoom(sourceID: route.transitionID, in: namespace))
         }
+    }
+}
+
+extension Recipe {
+    /// Frase lida pelo VoiceOver nos cartões: nome, categoria, energia, proteína, tempo e estado.
+    var accessibilitySummary: String {
+        var parts = [title, category.title]
+        if calories > 0 { parts.append("\(Int(calories.rounded())) calorias por porção") }
+        if protein > 0 { parts.append("\(protein.cleanString) gramas de proteína") }
+        if totalMinutes > 0 { parts.append(Format.minutes(totalMinutes)) }
+        if isFavorite { parts.append("favorita") }
+        if timesCooked > 0 { parts.append(timesCooked == 1 ? "feita 1 vez" : "feita \(timesCooked) vezes") }
+        if isSample { parts.append("receita de exemplo") }
+        return parts.joined(separator: ", ")
     }
 }

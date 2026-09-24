@@ -1,3 +1,4 @@
+import ImageIO
 import UIKit
 
 /// Corre fora da thread principal (Task.detached), por isso não está isolado no MainActor.
@@ -41,14 +42,58 @@ extension UIImage {
 }
 
 /// Cache de imagens descodificadas, para os cartões não descodificarem JPEG a cada redesenho.
-final class ImageCache {
+///
+/// As imagens são descodificadas já no tamanho em que aparecem (ImageIO, sem abrir a imagem inteira)
+/// e preparadas para o ecrã antes de serem mostradas. A cache tem um limite de memória;
+/// o `NSCache` é seguro entre threads, por isso a descodificação pode correr em segundo plano.
+nonisolated final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
     private let cache = NSCache<NSString, UIImage>()
 
-    func image(for key: String, data: Data) -> UIImage? {
-        if let cached = cache.object(forKey: key as NSString) { return cached }
-        guard let image = UIImage(data: data) else { return nil }
-        cache.setObject(image, forKey: key as NSString)
+    private init() {
+        cache.totalCostLimit = 80 * 1024 * 1024  // ~80 MB de imagens descodificadas
+    }
+
+    /// Só o que já está em cache (não descodifica).
+    func cached(_ key: String) -> UIImage? {
+        cache.object(forKey: key as NSString)
+    }
+
+    /// Imagem da cache ou descodificada agora (no máximo `maxPixelSize` no lado maior).
+    func image(for key: String, data: Data, maxPixelSize: CGFloat? = nil) -> UIImage? {
+        if let cached = cached(key) { return cached }
+        guard let image = Self.decode(data, maxPixelSize: maxPixelSize) else { return nil }
+        let pixels = image.size.width * image.scale * image.size.height * image.scale
+        cache.setObject(image, forKey: key as NSString, cost: Int(pixels * 4))
         return image
+    }
+
+    /// O mesmo, fora da thread principal (para as grelhas não engasgarem ao fazer scroll).
+    func load(_ key: String, data: Data, maxPixelSize: CGFloat?) async -> UIImage? {
+        if let cached = cached(key) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            self.image(for: key, data: data, maxPixelSize: maxPixelSize)
+        }.value
+    }
+
+    private static func decode(_ data: Data, maxPixelSize: CGFloat?) -> UIImage? {
+        let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else { return nil }
+        var options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+        ]
+        if let maxPixelSize { options[kCGImageSourceThumbnailMaxPixelSize] = maxPixelSize }
+        else if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+                let height = properties[kCGImagePropertyPixelHeight] as? CGFloat {
+            options[kCGImageSourceThumbnailMaxPixelSize] = max(width, height)
+        }
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: data)
+        }
+        let image = UIImage(cgImage: cgImage)
+        return image.preparingForDisplay() ?? image
     }
 }
