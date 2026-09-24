@@ -51,10 +51,13 @@ struct GeminiKeySection: View {
                         .submitLabel(.done)
                         .onSubmit(save)
                 }
-                Button(action: save) {
-                    Label("Guardar chave", systemImage: "checkmark.circle")
+                // Só aparece depois de colar a chave (um botão inativo à espera parecia avariado).
+                if !draftKey.trimmed.isEmpty {
+                    Button(action: save) {
+                        Label("Guardar chave", systemImage: "checkmark.circle")
+                    }
+                    .disabled(check == .checking)
                 }
-                .disabled(draftKey.trimmed.isEmpty || check == .checking)
                 Link(destination: URL(string: "https://aistudio.google.com/apikey")!) {
                     Label("Criar chave no Google AI Studio", systemImage: "arrow.up.right.square")
                 }
@@ -64,6 +67,7 @@ struct GeminiKeySection: View {
         }
         .animation(.snappy, value: savedKey)
         .animation(.snappy, value: check)
+        .animation(.snappy, value: draftKey.trimmed.isEmpty)
         .confirmationDialog("Remover a chave do Gemini?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remover", role: .destructive) {
                 Keychain.set(nil, for: GeminiReader.keychainAccount)
