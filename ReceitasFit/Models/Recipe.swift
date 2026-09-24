@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-struct Ingredient: Codable, Hashable, Identifiable {
+nonisolated struct Ingredient: Codable, Hashable, Identifiable, Sendable {
     var id: UUID = UUID()
     var name: String
     var amount: Double?
@@ -33,7 +33,7 @@ struct Ingredient: Codable, Hashable, Identifiable {
     }
 }
 
-struct RecipeStep: Codable, Hashable, Identifiable {
+nonisolated struct RecipeStep: Codable, Hashable, Identifiable, Sendable {
     var id: UUID = UUID()
     var text: String
 

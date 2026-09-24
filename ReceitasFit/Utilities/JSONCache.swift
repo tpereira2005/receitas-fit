@@ -1,30 +1,34 @@
 import Foundation
+import Synchronization
 
 /// Descodifica os campos guardados em JSON (ingredientes, passos, porções) uma só vez por conteúdo.
 ///
 /// As vistas leem estes campos várias vezes em cada redesenho; sem cache, o JSON era
 /// descodificado de cada vez. A chave é o próprio conteúdo (`Data`), por isso nunca devolve
 /// valores desatualizados: se o JSON muda, a chave também muda.
-enum JSONCache {
-    private static var cache: [Key: Any] = [:]
-    private static let limit = 600
-
-    private struct Key: Hashable {
+/// Os modelos do SwiftData não estão isolados no MainActor, por isso a cache é protegida por um `Mutex`.
+nonisolated enum JSONCache {
+    private struct Key: Hashable, Sendable {
         let type: ObjectIdentifier
         let data: Data
     }
 
-    static func decode<T: Decodable>(_ type: [T].Type, from data: Data) -> [T] {
+    private static let storage = Mutex<[Key: any Sendable]>([:])
+    private static let limit = 600
+
+    static func decode<T: Decodable & Sendable>(_ type: [T].Type, from data: Data) -> [T] {
         guard !data.isEmpty else { return [] }
         let key = Key(type: ObjectIdentifier(type), data: data)
-        if let cached = cache[key] as? [T] {
+        if let cached = storage.withLock({ $0[key] }) as? [T] {
             return cached
         }
         let value = (try? JSONDecoder().decode(type, from: data)) ?? []
-        if cache.count >= limit {
-            cache.removeAll(keepingCapacity: true)
+        storage.withLock { cache in
+            if cache.count >= limit {
+                cache.removeAll(keepingCapacity: true)
+            }
+            cache[key] = value
         }
-        cache[key] = value
         return value
     }
 
@@ -33,6 +37,6 @@ enum JSONCache {
     }
 
     /// Só para testes.
-    static var count: Int { cache.count }
-    static func reset() { cache.removeAll() }
+    static var count: Int { storage.withLock { $0.count } }
+    static func reset() { storage.withLock { $0.removeAll() } }
 }

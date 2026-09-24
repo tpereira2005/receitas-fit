@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
+nonisolated enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable, Sendable {
     // A ordem dos casos define a ordem em toda a app (filtros, Explorar e editor).
     case snack, iceCream, breakfast, lunch, dinner, dessert, drink, other
 
@@ -59,7 +59,7 @@ enum RecipeCategory: String, CaseIterable, Identifiable, Codable, Hashable {
 }
 
 /// Filtros rápidos usados na pesquisa e nas coleções inteligentes.
-enum QuickFilter: String, CaseIterable, Identifiable, Hashable {
+nonisolated enum QuickFilter: String, CaseIterable, Identifiable, Hashable, Sendable {
     case highProtein, lowCalorie, quick, favorites
 
     var id: String { rawValue }

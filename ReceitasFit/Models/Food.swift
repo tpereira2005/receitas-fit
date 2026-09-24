@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 /// Valores nutricionais. Nos alimentos são por 100 g/ml; nas receitas são por porção.
-struct NutritionFacts: Hashable, Codable {
+nonisolated struct NutritionFacts: Hashable, Codable, Sendable {
     var calories: Double = 0
     var protein: Double = 0
     var carbs: Double = 0
@@ -47,7 +47,7 @@ struct NutritionFacts: Hashable, Codable {
     var isEmpty: Bool { calories == 0 && protein == 0 && carbs == 0 && fat == 0 }
 }
 
-enum FoodCategory: String, CaseIterable, Identifiable, Codable {
+nonisolated enum FoodCategory: String, CaseIterable, Identifiable, Codable, Sendable {
     case protein, dairy, grains, fruit, vegetables, fats, supplements, condiments, other
 
     var id: String { rawValue }
@@ -126,7 +126,7 @@ enum FoodCategory: String, CaseIterable, Identifiable, Codable {
 }
 
 /// Porção com nome definida pelo utilizador para um alimento (por exemplo "1 scoop" = 30 g).
-struct FoodPortion: Codable, Hashable, Identifiable {
+nonisolated struct FoodPortion: Codable, Hashable, Identifiable, Sendable {
     var id: UUID = UUID()
     var name: String
     /// Peso (g ou ml, conforme a base do alimento) de uma porção.
@@ -140,7 +140,7 @@ struct FoodPortion: Codable, Hashable, Identifiable {
 }
 
 /// Base dos valores do rótulo: por 100 g ou por 100 ml.
-enum MeasureBase: String, CaseIterable, Identifiable, Codable {
+nonisolated enum MeasureBase: String, CaseIterable, Identifiable, Codable, Sendable {
     case grams = "g"
     case milliliters = "ml"
 
@@ -150,7 +150,7 @@ enum MeasureBase: String, CaseIterable, Identifiable, Codable {
 }
 
 /// Unidades disponíveis para indicar a quantidade de um ingrediente numa receita.
-enum IngredientUnit: String, CaseIterable, Identifiable, Codable {
+nonisolated enum IngredientUnit: String, CaseIterable, Identifiable, Codable, Sendable {
     case gram = "g"
     case milliliter = "ml"
     case unit = "un"
@@ -259,7 +259,7 @@ final class Food {
 
 /// Cópia dos dados de um alimento guardada em cada ingrediente de uma receita.
 /// Assim, editar um alimento na biblioteca nunca altera uma receita sem o utilizador aceitar.
-struct FoodSnapshot: Codable, Hashable {
+nonisolated struct FoodSnapshot: Codable, Hashable, Sendable {
     var name: String
     var base: String
     var unitWeight: Double?

@@ -1,6 +1,6 @@
 import Foundation
 
-enum Format {
+nonisolated enum Format {
     static func minutes(_ minutes: Int) -> String {
         guard minutes >= 60 else { return "\(minutes) min" }
         let hours = minutes / 60
@@ -19,18 +19,18 @@ enum Format {
 
 extension Double {
     /// Número sem casas decimais desnecessárias ("12" em vez de "12,0").
-    var cleanString: String {
+    nonisolated var cleanString: String {
         formatted(.number.precision(.fractionLength(0...1)))
     }
 }
 
 extension String {
-    var trimmed: String {
+    nonisolated var trimmed: String {
         trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Versão sem acentos e em minúsculas, para pesquisa ("Proteína" → "proteina").
-    var searchNormalized: String {
+    nonisolated var searchNormalized: String {
         folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "pt_PT"))
     }
 }
