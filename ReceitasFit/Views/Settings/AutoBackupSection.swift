@@ -80,6 +80,7 @@ struct AutoBackupSection: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .modifier(WholePointHeight())
     }
 
     private var isRunning: Bool {
@@ -171,5 +172,28 @@ struct AutoBackupSection: View {
 
     private var footer: some View {
         Text("Uma cópia por dia, quando abres ou sais da app, e só se algo mudou. Ficam as \(AutoBackup.keepCount) mais recentes, com as fotografias; os outros ficheiros da pasta nunca são tocados. Uma pasta no iCloud Drive mantém-nas fora do iPhone.")
+    }
+}
+
+/// Arredonda a altura da linha para pontos inteiros.
+///
+/// Com texto e ícone, a altura natural desta linha é fracionária; a lista arredonda a posição
+/// da linha seguinte e fica uma fresta de 1 píxel com a cor do fundo por baixo do separador.
+private struct WholePointHeight: ViewModifier {
+    func body(content: Content) -> some View {
+        WholePointLayout { content }
+    }
+}
+
+private struct WholePointLayout: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+        let size = subview.sizeThatFits(proposal)
+        return CGSize(width: size.width, height: size.height.rounded(.up))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let subview = subviews.first else { return }
+        subview.place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(bounds.size))
     }
 }
