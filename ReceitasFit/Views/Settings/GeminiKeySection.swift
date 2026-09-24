@@ -43,7 +43,7 @@ struct GeminiKeySection: View {
                 .confirmationDialog("Remover a chave do Gemini?", isPresented: $confirmRemove, titleVisibility: .visible) {
                     Button("Remover", role: .destructive) {
                         Keychain.set(nil, for: GeminiReader.keychainAccount)
-                        savedKey = nil
+                        self.savedKey = nil  // `self.`: aqui dentro, `savedKey` é a constante do `if let`
                         check = .idle
                     }
                 } message: {
