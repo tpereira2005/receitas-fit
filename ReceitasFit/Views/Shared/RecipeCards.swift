@@ -128,7 +128,8 @@ struct RecipeGrid: View {
     @Environment(\.modelContext) private var context
     @State private var pendingDeletion: Recipe?
 
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    // Alinhados pelo topo: os títulos têm uma ou duas linhas e as fotografias devem ficar à mesma altura.
+    private let columns = [GridItem(.flexible(), spacing: 14, alignment: .top), GridItem(.flexible(), spacing: 14, alignment: .top)]
 
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
