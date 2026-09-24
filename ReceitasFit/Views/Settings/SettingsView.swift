@@ -29,6 +29,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             Form {
                 Section("Resumo") {
                     LabeledContent("Receitas", value: "\(recipes.count)")
@@ -55,6 +56,7 @@ struct SettingsView: View {
                 }
 
                 GeminiKeySection()
+                    .id("gemini")
 
                 Section {
                     Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
@@ -77,6 +79,13 @@ struct SettingsView: View {
                     LabeledContent("Versão", value: appVersion)
                     LabeledContent("Feita com", value: "SwiftUI · SwiftData")
                 }
+            }
+            .task {
+                // Usado apenas nas capturas automáticas do CI.
+                guard ScreenshotMode.string("screenshotGeminiState") != nil else { return }
+                try? await Task.sleep(for: .milliseconds(600))
+                proxy.scrollTo("gemini", anchor: .top)
+            }
             }
             .navigationTitle("Definições")
             .navigationBarTitleDisplayMode(.inline)

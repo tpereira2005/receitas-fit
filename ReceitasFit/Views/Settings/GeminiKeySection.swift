@@ -1,101 +1,147 @@
 import SwiftUI
 
 /// Secção das Definições para a chave do Gemini usada na leitura de embalagens.
+///
+/// Segue o mesmo desenho das cópias automáticas: um cartão de estado e, por baixo,
+/// só as ações que fazem sentido nesse estado.
 struct GeminiKeySection: View {
-    private enum Status: Equatable {
-        case none, checking, valid, failed(String)
+    private enum Check: Equatable {
+        case idle, checking, verified, failed(GeminiReader.ReadError)
     }
 
-    @State private var hasKey = GeminiReader.apiKey != nil
+    @State private var savedKey = Self.initialKey()
     @State private var draftKey = ""
-    @State private var status = Status.none
+    @State private var check = Check.idle
     @State private var confirmRemove = false
+    @FocusState private var keyFieldFocused: Bool
 
     var body: some View {
         Section {
-            if hasKey {
-                LabeledContent("Chave do Gemini") {
-                    Label("Guardada", systemImage: "checkmark.seal.fill")
-                        .foregroundStyle(.green)
+            statusCard
+        } header: {
+            Text("Leitura de embalagens")
+        }
+        .listSectionSpacing(.compact)
+
+        Section {
+            if let savedKey {
+                LabeledContent("Chave", value: Self.masked(savedKey))
+                    .monospacedDigit()
+                Button {
+                    verify(savedKey, save: false)
+                } label: {
+                    Label("Verificar chave", systemImage: "arrow.clockwise")
                 }
-                statusRow
-                Button("Verificar chave", systemImage: "checkmark.circle") {
-                    if let key = GeminiReader.apiKey { check(key, saveIfValid: false) }
+                .disabled(check == .checking)
+                Button(role: .destructive) {
+                    confirmRemove = true
+                } label: {
+                    Label("Remover chave", systemImage: "trash")
+                        .foregroundStyle(.red)
                 }
-                .disabled(status == .checking)
-                Button("Remover chave", systemImage: "trash", role: .destructive) { confirmRemove = true }
             } else {
-                SecureField("Colar chave da API", text: $draftKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onSubmit(save)
-                statusRow
-                Button("Guardar chave", systemImage: "key.fill", action: save)
-                    .disabled(draftKey.trimmed.isEmpty || status == .checking)
+                HStack(spacing: 12) {
+                    Image(systemName: "key.fill")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    SecureField("Colar a chave da API", text: $draftKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .focused($keyFieldFocused)
+                        .submitLabel(.done)
+                        .onSubmit(save)
+                }
+                Button(action: save) {
+                    Label("Guardar chave", systemImage: "checkmark.circle")
+                }
+                .disabled(draftKey.trimmed.isEmpty || check == .checking)
                 Link(destination: URL(string: "https://aistudio.google.com/apikey")!) {
                     Label("Criar chave no Google AI Studio", systemImage: "arrow.up.right.square")
                 }
             }
-        } header: {
-            Text("Leitura de embalagens")
         } footer: {
-            Text("Com a chave, as fotografias da embalagem são enviadas ao Gemini (Google) quando tocas em “Ler”. No nível gratuito, a Google pode usar o que é enviado para melhorar os seus produtos. Sem chave, sem internet ou sem quota, a leitura é feita neste iPhone, com menos precisão. A chave fica no Porta-chaves do iPhone.")
+            Text("As fotografias só são enviadas ao Gemini (Google) quando tocas em “Ler”. No nível gratuito, a Google pode usá-las para melhorar os seus produtos. A chave fica no Porta-chaves deste iPhone.")
         }
+        .animation(.snappy, value: savedKey)
+        .animation(.snappy, value: check)
         .confirmationDialog("Remover a chave do Gemini?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remover", role: .destructive) {
                 Keychain.set(nil, for: GeminiReader.keychainAccount)
-                withAnimation {
-                    hasKey = false
-                    status = .none
-                }
+                savedKey = nil
+                check = .idle
             }
         } message: {
-            Text("A leitura de embalagens passa a ser feita só no iPhone.")
+            Text("As embalagens passam a ser lidas só neste iPhone, com menos precisão.")
         }
     }
 
-    @ViewBuilder
-    private var statusRow: some View {
-        switch status {
-        case .none:
-            EmptyView()
+    // MARK: - Estado
+
+    private var statusCard: some View {
+        let state = cardState
+        return SettingsStatusCard(
+            symbol: state.symbol,
+            color: state.color,
+            title: state.title,
+            subtitle: state.subtitle,
+            isAnimating: check == .checking
+        )
+    }
+
+    private var cardState: (symbol: String, color: Color, title: String, subtitle: String) {
+        switch check {
         case .checking:
-            HStack(spacing: 10) {
-                ProgressView()
-                Text("A verificar…").foregroundStyle(.secondary)
-            }
-        case .valid:
-            Label("A chave funciona", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+            return ("arrow.triangle.2.circlepath", .gray, "A verificar a chave…", "Um pedido curto ao Gemini, sem fotografias.")
+        case .failed(.quota):
+            return ("hourglass", .orange, "Limite gratuito atingido",
+                    "A chave está guardada. Até o limite renovar, as embalagens são lidas no iPhone.")
+        case .failed(.offline):
+            return ("wifi.slash", .orange, "Sem ligação ao Gemini", "Verifica a internet e tenta outra vez.")
+        case .failed(let error):
+            return ("exclamationmark.triangle.fill", .orange, "A chave não funciona",
+                    savedKey == nil ? "\(error.message). Confirma que copiaste a chave toda." : error.message)
+        case .verified:
+            return ("sparkles", .green, "Gemini ativo", "Chave verificada agora mesmo.")
+        case .idle:
+            return savedKey == nil
+                ? ("sparkles", .gray, "Gemini desativado", "Sem chave, as embalagens são lidas neste iPhone, com menos precisão.")
+                : ("sparkles", .green, "Gemini ativo", "As embalagens são lidas com o Gemini, que percebe melhor tabelas difíceis.")
         }
     }
+
+    private static func initialKey() -> String? {
+        // Capturas automáticas do CI: simula uma chave guardada.
+        if ScreenshotMode.string("screenshotGeminiState") == "on" { return "AIzaSyExemploDeChave0x7Qk" }
+        if ScreenshotMode.string("screenshotGeminiState") == "off" { return nil }
+        return GeminiReader.apiKey
+    }
+
+    /// "AIza••••x7Qk": o suficiente para reconhecer a chave sem a mostrar.
+    private static func masked(_ key: String) -> String {
+        guard key.count > 8 else { return String(repeating: "•", count: key.count) }
+        return "\(key.prefix(4))••••\(key.suffix(4))"
+    }
+
+    // MARK: - Ações
 
     private func save() {
         let key = draftKey.trimmed
         guard !key.isEmpty else { return }
-        check(key, saveIfValid: true)
+        keyFieldFocused = false
+        verify(key, save: true)
     }
 
     /// Testa a chave; ao guardar, só fica guardada se funcionar (ou se o problema for só a quota).
-    private func check(_ key: String, saveIfValid: Bool) {
-        withAnimation { status = .checking }
+    private func verify(_ key: String, save: Bool) {
+        check = .checking
         Task {
             let error = await GeminiReader.test(key: key)
-            if saveIfValid, error == nil || error == .quota {
+            if save, error == nil || error == .quota {
                 Keychain.set(key, for: GeminiReader.keychainAccount)
                 draftKey = ""
-                hasKey = true
+                savedKey = key
             }
-            withAnimation {
-                if let error {
-                    status = .failed(error == .quota ? "Chave guardada, mas o limite gratuito está esgotado por agora." : error.message)
-                } else {
-                    status = .valid
-                }
-            }
+            check = error.map { .failed($0) } ?? .verified
             if error == nil { Haptics.success() } else { Haptics.warning() }
         }
     }

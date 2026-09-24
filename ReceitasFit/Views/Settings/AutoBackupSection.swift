@@ -67,26 +67,9 @@ struct AutoBackupSection: View {
     // MARK: - Cartão de estado
 
     private var statusCard: some View {
-        HStack(spacing: 14) {
-            Image(systemName: symbol)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
-                .symbolEffect(.rotate, options: .repeating, isActive: isRunning)
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: 44, height: 44)
-                .background(color.gradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-                subtitle
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        SettingsStatusCard(symbol: symbol, color: color, title: title, isAnimating: isRunning) {
+            subtitle
         }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
         .animation(.snappy, value: backup.folderName)
         .animation(.snappy, value: backup.isRunning)
         .animation(.snappy, value: backup.lastError)

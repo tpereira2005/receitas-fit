@@ -253,11 +253,14 @@ jobs:
           shot 18-editar-porcoes -tab foods -screenshotOpenFood YES -screenshotFoodPortions YES -screenshotEditFood YES
           shot 19-ler-embalagem -tab foods -screenshotScanner YES
           shot 20-rever-embalagem -tab foods -screenshotScanner YES -screenshotScannerReview YES
+          shot 21-gemini-ativo -screenshotSettings YES -screenshotGeminiState on
+          shot 22-gemini-sem-chave -screenshotSettings YES -screenshotGeminiState off
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES
           shot 11-receita-nutricao-escuro -screenshotOpenFirst YES -screenshotDetailScroll YES
           shot 16-copias-escuro -screenshotSettings YES -screenshotBackupState ready
+          shot 23-gemini-escuro -screenshotSettings YES -screenshotGeminiState on
 
       - uses: actions/upload-artifact@v5
         with:
