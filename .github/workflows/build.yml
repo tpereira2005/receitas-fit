@@ -129,6 +129,14 @@ jobs:
           work=$(mktemp -d)
           python3 scripts/make_source.py > "$work/source.json"
           python3 -m json.tool "$work/source.json" > /dev/null
+          # Ícone da fonte: o render oficial (Icon Composer) desta build, em 512 px.
+          # Se a exportação falhar, mantém o ícone publicado anteriormente.
+          if [ -f icon-renders/Default.png ]; then
+            sips -Z 512 icon-renders/Default.png --out "$work/AppIcon.png" > /dev/null
+          else
+            curl -sfL "https://raw.githubusercontent.com/${REPO}/sidestore/AppIcon.png" -o "$work/AppIcon.png" || true
+          fi
+          ls -la "$work"
           cd "$work"
           printf '# Fonte do SideStore\n\nAdiciona este link no SideStore (Fontes → +):\n\nhttps://raw.githubusercontent.com/%s/sidestore/source.json\n' "$REPO" > README.md
           git init -q -b sidestore
@@ -218,5 +226,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view latest --json assets --jq '.assets[].name' | grep '\.png$' \
-            | xargs -I{} gh release delete-asset latest {} --yes
+            | grep -v '^AppIcon.png$' | xargs -I{} gh release delete-asset latest {} --yes
           gh release upload latest screenshots/*.png --clobber

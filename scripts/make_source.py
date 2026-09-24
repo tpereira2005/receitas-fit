@@ -15,10 +15,9 @@ size = int(os.environ["IPA_SIZE"])
 notes = os.environ.get("NOTES", "").strip() or f"Versão {version}"
 
 bundle_id = "com.tpereira.receitasfit"
-raw = f"https://raw.githubusercontent.com/{repo}/main"
 releases = f"https://github.com/{repo}/releases/download"
 download_url = f"{releases}/v{version}/ReceitasFit.ipa"
-icon_url = f"{releases}/latest/AppIcon.png"
+icon_url = f"https://raw.githubusercontent.com/{repo}/sidestore/AppIcon.png"
 screenshots = [f"{releases}/latest/{name}.png" for name in ("1-inicio", "2-receita", "4-alimentos", "3-pesquisa")]
 date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 description = (
