@@ -60,6 +60,9 @@ enum SpotlightIndex {
 }
 
 // MARK: - Atalhos e Siri
+//
+// As intenções ficam isoladas no MainActor (o padrão da app): o `@Parameter` cria uma propriedade
+// mutável que não pode ser `nonisolated`. A entidade e a pesquisa não têm wrappers e ficam `nonisolated`.
 
 /// Uma receita, como aparece nos Atalhos e na Siri.
 nonisolated struct RecipeEntity: AppEntity {
@@ -112,7 +115,7 @@ nonisolated struct RecipeEntityQuery: EntityStringQuery {
 }
 
 /// "Abrir receita": abre a app na receita escolhida.
-nonisolated struct OpenRecipeIntent: AppIntent {
+struct OpenRecipeIntent: AppIntent {
     static let title: LocalizedStringResource = "Abrir receita"
     static let description = IntentDescription("Abre uma receita na app Receitas.")
     static let openAppWhenRun = true
@@ -128,7 +131,7 @@ nonisolated struct OpenRecipeIntent: AppIntent {
 }
 
 /// "Fiz esta receita": regista que a receita foi feita hoje, sem abrir a app.
-nonisolated struct MarkCookedIntent: AppIntent {
+struct MarkCookedIntent: AppIntent {
     static let title: LocalizedStringResource = "Fiz esta receita"
     static let description = IntentDescription("Regista que fizeste uma receita hoje.")
 
@@ -152,7 +155,7 @@ nonisolated struct MarkCookedIntent: AppIntent {
     }
 }
 
-nonisolated struct ReceitasShortcuts: AppShortcutsProvider {
+struct ReceitasShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
             intent: OpenRecipeIntent(),
