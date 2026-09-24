@@ -140,12 +140,18 @@ struct RecipeFilterPanel: View {
         Button {
             withAnimation(.snappy) { action() }
         } label: {
-            Label { Text(title) } icon: { icon }
+            // HStack e não Label: dentro de um Form, o Label ganha o estilo das linhas da lista.
+            HStack(spacing: 6) {
+                icon
+                Text(title)
+            }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isOn ? Color.white : Color.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(isOn ? AnyShapeStyle(color.gradient) : AnyShapeStyle(Color(.tertiarySystemFill)), in: .capsule)
+                // Dentro de um Form, o FlowLayout propõe pouca largura: sem isto o texto partia-se letra a letra.
+                .fixedSize()
         }
         .buttonStyle(.borderless)
     }
