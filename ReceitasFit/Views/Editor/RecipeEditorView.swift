@@ -114,6 +114,26 @@ struct RecipeEditorView: View {
             .onChange(of: photoItem) { _, item in
                 loadPhoto(item)
             }
+            // Janelas da fotografia ligadas ao editor inteiro: numa secção de um Form, cada linha
+            // recebia uma cópia destes modificadores e a janela abria várias vezes (e fechava o editor).
+            .photosPicker(isPresented: $showingPhotoLibrary, selection: $photoItem, matching: .images)
+            .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
+                guard case .success(let url) = result else { return }
+                let hasAccess = url.startAccessingSecurityScopedResource()
+                defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
+                if let data = try? Data(contentsOf: url) { usePhoto(data) }
+            }
+            .fullScreenCover(isPresented: $showingCamera) {
+                CameraPicker { image in
+                    if let data = image.jpegData(compressionQuality: 0.95) { usePhoto(data) }
+                }
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showingFocusEditor) {
+                if let photoImage {
+                    PhotoFocusEditor(image: photoImage, focusX: $draft.photoFocusX, focusY: $draft.photoFocusY)
+                }
+            }
         }
     }
 
@@ -182,24 +202,6 @@ struct RecipeEditorView: View {
                         photoImage = nil
                     }
                 }
-            }
-        }
-        .photosPicker(isPresented: $showingPhotoLibrary, selection: $photoItem, matching: .images)
-        .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
-            guard case .success(let url) = result else { return }
-            let hasAccess = url.startAccessingSecurityScopedResource()
-            defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
-            if let data = try? Data(contentsOf: url) { usePhoto(data) }
-        }
-        .fullScreenCover(isPresented: $showingCamera) {
-            CameraPicker { image in
-                if let data = image.jpegData(compressionQuality: 0.95) { usePhoto(data) }
-            }
-            .ignoresSafeArea()
-        }
-        .sheet(isPresented: $showingFocusEditor) {
-            if let photoImage {
-                PhotoFocusEditor(image: photoImage, focusX: $draft.photoFocusX, focusY: $draft.photoFocusY)
             }
         }
     }

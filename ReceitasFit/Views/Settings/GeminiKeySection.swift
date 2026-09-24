@@ -39,6 +39,16 @@ struct GeminiKeySection: View {
                     Label("Remover chave", systemImage: "trash")
                         .foregroundStyle(.red)
                 }
+                // No próprio botão (e não na secção): numa secção de um Form, cada linha recebia uma cópia.
+                .confirmationDialog("Remover a chave do Gemini?", isPresented: $confirmRemove, titleVisibility: .visible) {
+                    Button("Remover", role: .destructive) {
+                        Keychain.set(nil, for: GeminiReader.keychainAccount)
+                        savedKey = nil
+                        check = .idle
+                    }
+                } message: {
+                    Text("As embalagens passam a ser lidas só neste iPhone, com menos precisão.")
+                }
             } else {
                 HStack(spacing: 12) {
                     Image(systemName: "key.fill")
@@ -68,15 +78,6 @@ struct GeminiKeySection: View {
         .animation(.snappy, value: savedKey)
         .animation(.snappy, value: check)
         .animation(.snappy, value: draftKey.trimmed.isEmpty)
-        .confirmationDialog("Remover a chave do Gemini?", isPresented: $confirmRemove, titleVisibility: .visible) {
-            Button("Remover", role: .destructive) {
-                Keychain.set(nil, for: GeminiReader.keychainAccount)
-                savedKey = nil
-                check = .idle
-            }
-        } message: {
-            Text("As embalagens passam a ser lidas só neste iPhone, com menos precisão.")
-        }
     }
 
     // MARK: - Estado

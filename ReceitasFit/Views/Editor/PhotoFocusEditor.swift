@@ -31,6 +31,8 @@ struct PhotoFocusEditor: View {
             }
             .navigationTitle("Enquadramento")
             .navigationBarTitleDisplayMode(.inline)
+            // Arrastar o círculo para baixo não pode fechar a janela sem querer.
+            .interactiveDismissDisabled()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar", systemImage: "xmark", role: .cancel) { dismiss() }
@@ -61,7 +63,8 @@ struct PhotoFocusEditor: View {
                                 .position(x: focus.x * size.width, y: focus.y * size.height)
                         }
                         .contentShape(Rectangle())
-                        .gesture(
+                        // Prioridade sobre o scroll: arrastar o círculo não mexe na página.
+                        .highPriorityGesture(
                             DragGesture(minimumDistance: 0)
                                 .onChanged { value in
                                     focus = UnitPoint(
