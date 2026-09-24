@@ -26,8 +26,17 @@ struct AutoBackupSection: View {
     }
 
     var body: some View {
+        // O estado fica num cartão próprio e as ações num segundo cartão logo abaixo.
+        // Com o estado e as ações na mesma secção, a lista deixava 1 píxel do fundo à vista
+        // por baixo do separador da linha de estado.
         Section {
             statusCard
+        } header: {
+            Text("Cópias automáticas")
+        }
+        .listSectionSpacing(.compact)
+
+        Section {
             switch status {
             case .off:
                 Button(action: onChooseFolder) {
@@ -46,8 +55,6 @@ struct AutoBackupSection: View {
                         .foregroundStyle(.red)
                 }
             }
-        } header: {
-            Text("Cópias automáticas")
         } footer: {
             footer
         }
@@ -78,11 +85,11 @@ struct AutoBackupSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .modifier(WholePointHeight())
-        // Margens inteiras: as automáticas são fracionárias e, numa linha mais alta do que o mínimo,
-        // deixavam 1 píxel do fundo à vista por baixo do separador. 16 pt nos lados é o valor da lista.
-        .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+        .animation(.snappy, value: backup.folderName)
+        .animation(.snappy, value: backup.isRunning)
+        .animation(.snappy, value: backup.lastError)
     }
 
     private var isRunning: Bool {
@@ -174,27 +181,5 @@ struct AutoBackupSection: View {
 
     private var footer: some View {
         Text("Uma cópia por dia, quando abres ou sais da app, e só se algo mudou. Ficam as \(AutoBackup.keepCount) mais recentes, com as fotografias; os outros ficheiros da pasta nunca são tocados. Uma pasta no iCloud Drive mantém-nas fora do iPhone.")
-    }
-}
-
-/// Arredonda a altura da linha para pontos inteiros.
-///
-/// Junto com as margens fixas, garante que a linha acaba num ponto inteiro (sem frestas).
-private struct WholePointHeight: ViewModifier {
-    func body(content: Content) -> some View {
-        WholePointLayout { content }
-    }
-}
-
-private struct WholePointLayout: Layout {
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard let subview = subviews.first else { return .zero }
-        let size = subview.sizeThatFits(proposal)
-        return CGSize(width: size.width, height: size.height.rounded(.up))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard let subview = subviews.first else { return }
-        subview.place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(bounds.size))
     }
 }
