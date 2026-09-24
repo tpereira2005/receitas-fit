@@ -92,17 +92,16 @@ struct RootView: View {
         // "O que há de novo": só para quem já usava a app (numa instalação nova não há novidades).
         #if DEBUG
         // Nas capturas do CI (compilação de desenvolvimento) só aparece quando pedido.
-        let isUpdate = ScreenshotMode.flag("screenshotWhatsNew")
+        if ScreenshotMode.flag("screenshotWhatsNew") { showingWhatsNew = true }
         #else
-        let isUpdate = didSeedSamples
-        #endif
         if whatsNewSeen < WhatsNewView.edition {
-            if isUpdate {
+            if didSeedSamples {
                 showingWhatsNew = true
             } else {
                 whatsNewSeen = WhatsNewView.edition
             }
         }
+        #endif
         if !didSeedSamples {
             didSeedSamples = true
             let count = (try? context.fetchCount(FetchDescriptor<Recipe>())) ?? 0
