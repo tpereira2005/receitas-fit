@@ -78,9 +78,11 @@ struct AutoBackupSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .modifier(WholePointHeight())
+        // Margens inteiras: as automáticas são fracionárias e, numa linha mais alta do que o mínimo,
+        // deixavam 1 píxel do fundo à vista por baixo do separador. 16 pt nos lados é o valor da lista.
+        .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
     }
 
     private var isRunning: Bool {
@@ -177,8 +179,7 @@ struct AutoBackupSection: View {
 
 /// Arredonda a altura da linha para pontos inteiros.
 ///
-/// Com texto e ícone, a altura natural desta linha é fracionária; a lista arredonda a posição
-/// da linha seguinte e fica uma fresta de 1 píxel com a cor do fundo por baixo do separador.
+/// Junto com as margens fixas, garante que a linha acaba num ponto inteiro (sem frestas).
 private struct WholePointHeight: ViewModifier {
     func body(content: Content) -> some View {
         WholePointLayout { content }
