@@ -29,8 +29,9 @@ struct NumberField: View {
                 if parsed != value { value = parsed }
             }
             .onChange(of: value) { _, newValue in
-                // Valor alterado por fora (por exemplo "Usar este valor"): atualiza o texto.
-                if !focused, Self.parse(text) != newValue {
+                // Valor alterado por fora (por exemplo "Usar este valor" ou a troca de medida): atualiza o texto.
+                // Um campo vazio e o valor 0 contam como iguais, para não escrever "0" enquanto se apaga.
+                if (Self.parse(text) ?? 0) != (newValue ?? 0) {
                     text = Self.format(newValue, maxFractionDigits)
                 }
             }

@@ -10,26 +10,44 @@ nonisolated struct Ingredient: Codable, Hashable, Identifiable, Sendable {
     var foodID: UUID?
     /// Valores do alimento no momento em que foi adicionado (ou atualizado com autorização do utilizador).
     var snapshot: FoodSnapshot?
+    /// Porção com nome do alimento usada como medida (desde a versão 1.3); `unit` guarda o nome dela.
+    var portionID: UUID?
 
-    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "", foodID: UUID? = nil, snapshot: FoodSnapshot? = nil) {
+    init(id: UUID = UUID(), name: String = "", amount: Double? = nil, unit: String = "", foodID: UUID? = nil,
+         snapshot: FoodSnapshot? = nil, portionID: UUID? = nil) {
         self.id = id
         self.name = name
         self.amount = amount
         self.unit = unit
         self.foodID = foodID
         self.snapshot = snapshot
+        self.portionID = portionID
     }
 
     /// Cria um ingrediente a partir de um alimento da biblioteca, guardando os valores atuais.
     init(food: Food, amount: Double?, unit: IngredientUnit, id: UUID = UUID()) {
-        self.init(
-            id: id,
-            name: food.name,
-            amount: unit == .toTaste ? nil : amount,
-            unit: unit.rawValue,
-            foodID: food.id,
-            snapshot: FoodSnapshot(food: food)
-        )
+        self.init(food: food, amount: amount, measure: .unit(unit), id: id)
+    }
+
+    /// Cria um ingrediente com uma medida do alimento. `snapshot` permite manter valores anteriores.
+    init(food: Food, amount: Double?, measure: IngredientMeasure, id: UUID = UUID(), snapshot: FoodSnapshot? = nil) {
+        let values = snapshot ?? FoodSnapshot(food: food)
+        switch measure {
+        case .unit(let unit):
+            self.init(id: id, name: values.name, amount: unit == .toTaste ? nil : amount, unit: unit.rawValue,
+                      foodID: food.id, snapshot: values)
+        case .portion(let portion):
+            self.init(id: id, name: values.name, amount: amount, unit: portion.name,
+                      foodID: food.id, snapshot: values, portionID: portion.id)
+        }
+    }
+
+    /// Medida usada por este ingrediente, se for uma das conhecidas.
+    var measure: IngredientMeasure? {
+        if let portionID {
+            return snapshot?.portion(portionID).map { .portion($0) }
+        }
+        return IngredientUnit(rawValue: unit).map { .unit($0) }
     }
 }
 
@@ -200,7 +218,8 @@ nonisolated extension Ingredient {
         guard let amount, amount > 0 else { return nil }
         let value = amount * scale
         let number = value.formatted(.number.precision(.fractionLength(0...(value < 10 ? 2 : 0))))
-        return unit.isEmpty ? number : "\(number) \(unit)"
+        let unitText = portionID == nil ? unit : FoodPortion.pluralize(unit, amount: value)
+        return unitText.isEmpty ? number : "\(number) \(unitText)"
     }
 
     func displayText(scale: Double = 1) -> String {

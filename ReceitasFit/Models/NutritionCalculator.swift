@@ -19,7 +19,14 @@ enum NutritionCalculator {
     }
 
     /// Converte a quantidade do ingrediente em gramas (ou ml).
-    static func grams(amount: Double?, unit: String, unitWeight: Double?) -> Double? {
+    /// As colheres usam o peso indicado no alimento ou, se não houver, 15 g e 5 g.
+    nonisolated static func grams(
+        amount: Double?,
+        unit: String,
+        unitWeight: Double?,
+        tablespoon: Double? = nil,
+        teaspoon: Double? = nil
+    ) -> Double? {
         guard let unit = IngredientUnit(rawValue: unit) else { return nil }
         switch unit {
         case .toTaste:
@@ -30,16 +37,18 @@ enum NutritionCalculator {
             guard let amount, let unitWeight, unitWeight > 0 else { return nil }
             return amount * unitWeight
         case .tablespoon:
-            return amount.map { $0 * 15 }
+            let weight = tablespoon.flatMap { $0 > 0 ? $0 : nil } ?? IngredientUnit.defaultTablespoon
+            return amount.map { $0 * weight }
         case .teaspoon:
-            return amount.map { $0 * 5 }
+            let weight = teaspoon.flatMap { $0 > 0 ? $0 : nil } ?? IngredientUnit.defaultTeaspoon
+            return amount.map { $0 * weight }
         }
     }
 
     /// Valores de um ingrediente. Usa a cópia guardada; o alimento só serve de recurso para ingredientes antigos.
     static func facts(for ingredient: Ingredient, food: Food?) -> NutritionFacts? {
         guard let source = ingredient.snapshot ?? food.map(FoodSnapshot.init(food:)),
-              let grams = grams(amount: ingredient.amount, unit: ingredient.unit, unitWeight: source.unitWeight)
+              let grams = source.grams(for: ingredient)
         else { return nil }
         return source.per100.scaled(by: grams / 100)
     }
@@ -84,8 +93,16 @@ enum NutritionCalculator {
     // MARK: - Alterações a alimentos
 
     /// Ingredientes que usam valores diferentes dos atuais do alimento.
+    /// Só conta o que afeta este ingrediente: nome, valores e o peso da medida que usa
+    /// (acrescentar uma porção que a receita não usa não obriga a rever a receita).
     static func isOutdated(_ ingredient: Ingredient, comparedTo food: Food) -> Bool {
-        ingredient.foodID == food.id && ingredient.snapshot != FoodSnapshot(food: food)
+        guard ingredient.foodID == food.id else { return false }
+        guard let snapshot = ingredient.snapshot else { return true }
+        let current = FoodSnapshot(food: food)
+        return snapshot.name != current.name
+            || snapshot.base != current.base
+            || snapshot.per100 != current.per100
+            || snapshot.grams(for: ingredient) != current.grams(for: ingredient)
     }
 
     /// Receitas com pelo menos um ingrediente deste alimento com valores anteriores.
@@ -100,6 +117,10 @@ enum NutritionCalculator {
             var updated = ingredient
             updated.name = food.name
             updated.snapshot = FoodSnapshot(food: food)
+            // Porção renomeada: o texto da medida acompanha o novo nome.
+            if let portion = updated.snapshot?.portion(ingredient.portionID) {
+                updated.unit = portion.name
+            }
             return updated
         }
     }

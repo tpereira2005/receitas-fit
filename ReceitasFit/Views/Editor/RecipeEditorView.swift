@@ -345,10 +345,7 @@ struct RecipeEditorView: View {
         draft.ingredients = draft.ingredients.map { ingredient in
             guard let food = ingredient.foodID.flatMap({ foodIndex[$0] }),
                   NutritionCalculator.isOutdated(ingredient, comparedTo: food) else { return ingredient }
-            var updated = ingredient
-            updated.name = food.name
-            updated.snapshot = FoodSnapshot(food: food)
-            return updated
+            return NutritionCalculator.ingredientsUpdated([ingredient], with: food)[0]
         }
     }
 

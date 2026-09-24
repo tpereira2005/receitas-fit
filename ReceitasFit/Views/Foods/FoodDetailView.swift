@@ -31,6 +31,55 @@ struct FoodDetailView: View {
         return columns
     }
 
+    // MARK: - Medidas
+
+    private struct MeasureRow: Identifiable {
+        let id: String
+        let title: String
+        let grams: Double
+    }
+
+    /// Porções com nome, unidade e colheres com peso próprio (as colheres por omissão não aparecem).
+    private var measureRows: [MeasureRow] {
+        var rows = food.portions.map { MeasureRow(id: $0.id.uuidString, title: "1 \($0.name)", grams: $0.grams) }
+        if let weight = food.unitWeight, weight > 0 {
+            rows.append(MeasureRow(id: "unit", title: "1 unidade", grams: weight))
+        }
+        if let weight = food.tablespoonWeight {
+            rows.append(MeasureRow(id: "tablespoon", title: "1 colher de sopa", grams: weight))
+        }
+        if let weight = food.teaspoonWeight {
+            rows.append(MeasureRow(id: "teaspoon", title: "1 colher de chá", grams: weight))
+        }
+        return rows
+    }
+
+    private var measuresSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Medidas").font(.title3.bold())
+            VStack(spacing: 0) {
+                ForEach(measureRows) { row in
+                    HStack {
+                        Text(row.title)
+                        Spacer()
+                        Text("\(row.grams.cleanString) \(food.measureBase.rawValue)")
+                            .foregroundStyle(.secondary)
+                        Text("\(Int((food.calories * row.grams / 100).rounded())) kcal")
+                            .monospacedDigit()
+                            .frame(minWidth: 72, alignment: .trailing)
+                    }
+                    .font(.subheadline)
+                    .padding(.vertical, 12)
+                    if row.id != measureRows.last?.id {
+                        Divider()
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+    }
+
     var body: some View {
         // Depois de apagar, a vista ainda é desenhada durante a animação de saída.
         if food.isDeleted || food.modelContext == nil {
@@ -41,6 +90,7 @@ struct FoodDetailView: View {
     }
 
     private var content: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
@@ -58,6 +108,11 @@ struct FoodDetailView: View {
                     NutritionLabel(columns: columns)
                         .padding(18)
                         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                }
+
+                if !measureRows.isEmpty {
+                    measuresSection
+                        .id("measures")
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -88,6 +143,13 @@ struct FoodDetailView: View {
             geometry.contentOffset.y + geometry.contentInsets.top > 60
         } action: { _, isPastHeader in
             withAnimation(.easeInOut(duration: 0.2)) { showsTitle = isPastHeader }
+        }
+        .task {
+            // Usado apenas nas capturas automáticas do CI.
+            guard ScreenshotMode.flag("screenshotFoodPortions") else { return }
+            try? await Task.sleep(for: .milliseconds(600))
+            proxy.scrollTo("measures", anchor: .top)
+        }
         }
         .navigationTitle(showsTitle ? food.name : "")
         .navigationBarTitleDisplayMode(.inline)
@@ -165,6 +227,14 @@ struct FoodDetailView: View {
 
     /// Usado apenas nas capturas automáticas do CI: simula a edição do alimento para mostrar a revisão.
     private func handleScreenshotArguments() {
+        if ScreenshotMode.flag("screenshotFoodPortions"), food.portions.isEmpty {
+            food.portions = [FoodPortion(name: "bife", grams: 120), FoodPortion(name: "peito inteiro", grams: 220)]
+            food.tablespoonWeight = 12
+            try? context.save()
+        }
+        if ScreenshotMode.flag("screenshotEditFood"), !showingEditor {
+            showingEditor = true
+        }
         guard ScreenshotMode.flag("screenshotFoodReview"), !showingReview, !usedIn.isEmpty else { return }
         var draft = FoodDraft(food: food)
         let original = draft

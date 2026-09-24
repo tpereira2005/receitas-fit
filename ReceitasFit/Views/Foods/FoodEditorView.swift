@@ -49,6 +49,7 @@ struct FoodEditorView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             Form {
                 Section("Alimento") {
                     TextField("Nome (ex.: Peito de frango)", text: $draft.name)
@@ -71,11 +72,18 @@ struct FoodEditorView: View {
                     }
                     .pickerStyle(.segmented)
                     OptionalDecimalFieldRow(title: "Peso de 1 unidade", unit: draft.base.rawValue, value: $draft.unitWeight)
+                    OptionalDecimalFieldRow(title: "Colher de sopa", unit: draft.base.rawValue, value: $draft.tablespoonWeight,
+                                            placeholder: IngredientUnit.defaultTablespoon.cleanString)
+                    OptionalDecimalFieldRow(title: "Colher de chá", unit: draft.base.rawValue, value: $draft.teaspoonWeight,
+                                            placeholder: IngredientUnit.defaultTeaspoon.cleanString)
                 } header: {
-                    Text("Medida")
+                    Text("Medidas")
                 } footer: {
-                    Text("O peso de uma unidade (p. ex. 1 ovo ≈ 60 g) é opcional e permite usar unidades nas receitas.")
+                    Text("Tudo opcional. O peso de uma unidade (p. ex. 1 ovo ≈ 60 g) permite usar unidades nas receitas. As colheres valem \(IngredientUnit.defaultTablespoon.cleanString) e \(IngredientUnit.defaultTeaspoon.cleanString) \(draft.base.rawValue) se não indicares outro peso (p. ex. 1 colher de sopa de azeite ≈ 13 g).")
                 }
+                .id("measures")
+
+                portionsSection
 
                 Section {
                     DecimalFieldRow(title: "Energia", unit: "kcal", value: $draft.facts.calories)
@@ -104,6 +112,13 @@ struct FoodEditorView: View {
                         }
                     }
                 }
+            }
+            .task {
+                // Usado apenas nas capturas automáticas do CI.
+                guard ScreenshotMode.flag("screenshotEditFood") else { return }
+                try? await Task.sleep(for: .milliseconds(600))
+                proxy.scrollTo("measures", anchor: .top)
+            }
             }
             .navigationTitle(food == nil ? "Novo alimento" : "Editar alimento")
             .navigationBarTitleDisplayMode(.inline)
@@ -158,6 +173,36 @@ struct FoodEditorView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Porções
+
+    private var portionsSection: some View {
+        Section {
+            ForEach($draft.portions) { $portion in
+                HStack(spacing: 10) {
+                    TextField("Nome (ex.: scoop)", text: $portion.name)
+                        .textInputAutocapitalization(.never)
+                    NumberField("0", value: $portion.grams, maxFractionDigits: 1)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 64)
+                    Text(draft.base.rawValue)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, alignment: .leading)
+                }
+            }
+            .onDelete { draft.portions.remove(atOffsets: $0) }
+
+            Button {
+                withAnimation { draft.portions.append(FoodPortion(name: "", grams: 0)) }
+            } label: {
+                Label("Adicionar porção", systemImage: "plus.circle.fill")
+            }
+        } header: {
+            Text("Porções")
+        } footer: {
+            Text("Dá nome às porções que usas muitas vezes, no singular: “scoop” = 30 g, “fatia” = 25 g, “iogurte” = 120 g. Nas receitas passas a poder escrever “2 scoops”.")
         }
     }
 

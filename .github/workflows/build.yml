@@ -245,6 +245,8 @@ jobs:
           shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready
           shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed
           shot 15-copias-desativadas -screenshotSettings YES -screenshotBackupState off
+          shot 17-alimento-medidas -tab foods -screenshotOpenFood YES -screenshotFoodPortions YES
+          shot 18-editar-porcoes -tab foods -screenshotOpenFood YES -screenshotFoodPortions YES -screenshotEditFood YES
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES

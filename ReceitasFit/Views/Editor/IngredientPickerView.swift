@@ -92,50 +92,105 @@ struct IngredientQuantityView: View {
     let onConfirm: (Ingredient) -> Void
 
     private let ingredientID: UUID
-    private let units: [IngredientUnit]
+    /// Medidas disponíveis: base, porções com nome, unidade, colheres e q.b.
+    private let measures: [IngredientMeasure]
     /// Valores já guardados na receita para este alimento; mantêm-se ao mudar só a quantidade.
     private let keptSnapshot: FoodSnapshot?
     @State private var amount: Double?
-    @State private var unit: IngredientUnit
+    @State private var measureID: String
 
     init(food: Food, initial: Ingredient?, confirmTitle: String, showsCancel: Bool = false, onConfirm: @escaping (Ingredient) -> Void) {
         self.food = food
         self.confirmTitle = confirmTitle
         self.showsCancel = showsCancel
         self.onConfirm = onConfirm
-        let units = IngredientUnit.available(for: food)
-        self.units = units
-        let initialUnit = initial.flatMap { IngredientUnit(rawValue: $0.unit) }.flatMap { units.contains($0) ? $0 : nil } ?? units[0]
+        let kept = initial?.foodID == food.id ? initial?.snapshot : nil
+        keptSnapshot = kept
         ingredientID = initial?.id ?? UUID()
-        keptSnapshot = initial?.foodID == food.id ? initial?.snapshot : nil
-        _unit = State(initialValue: initialUnit)
-        _amount = State(initialValue: initial?.amount ?? (initialUnit == .unit ? 1 : 100))
+
+        var measures = food.measures
+        // Uma porção entretanto apagada do alimento continua disponível para esta receita.
+        if let current = initial?.measure, !measures.contains(where: { $0.id == current.id }) {
+            measures.insert(current, at: 1)
+        }
+        self.measures = measures
+        let initialMeasure = initial?.measure.flatMap { current in measures.first { $0.id == current.id } } ?? measures[0]
+        _measureID = State(initialValue: initialMeasure.id)
+        let startsWithCount: Bool = switch initialMeasure {
+        case .portion, .unit(.unit): true
+        default: false
+        }
+        _amount = State(initialValue: initial?.amount ?? (startsWithCount ? 1 : 100))
+    }
+
+    private var measure: IngredientMeasure {
+        measures.first { $0.id == measureID } ?? measures[0]
+    }
+
+    private var isToTaste: Bool { measure == .unit(.toTaste) }
+
+    /// Valores usados: os anteriores da receita, se servirem para esta medida; senão, os atuais.
+    private var snapshot: FoodSnapshot {
+        if let keptSnapshot, keptSnapshot.supports(measure) { return keptSnapshot }
+        return FoodSnapshot(food: food)
     }
 
     private var ingredient: Ingredient {
-        Ingredient(
-            id: ingredientID,
-            name: keptSnapshot?.name ?? food.name,
-            amount: unit == .toTaste ? nil : amount,
-            unit: unit.rawValue,
-            foodID: food.id,
-            snapshot: keptSnapshot ?? FoodSnapshot(food: food)
-        )
+        Ingredient(food: food, amount: amount, measure: measure, id: ingredientID, snapshot: snapshot)
     }
 
     private var usesPreviousValues: Bool {
-        keptSnapshot != nil && keptSnapshot != FoodSnapshot(food: food)
+        guard keptSnapshot != nil else { return false }
+        return NutritionCalculator.isOutdated(ingredient, comparedTo: food)
     }
 
-    private var canConfirm: Bool { unit == .toTaste || (amount ?? 0) > 0 }
+    private var canConfirm: Bool { isToTaste || (amount ?? 0) > 0 }
+
+    /// Nome curto da medida ao lado da quantidade: "g", "scoops", "c. sopa".
+    private var measureLabel: String {
+        switch measure {
+        case .unit(let unit): unit.rawValue
+        case .portion(let portion): FoodPortion.pluralize(portion.name, amount: amount ?? 1)
+        }
+    }
+
+    @ViewBuilder
+    private func measureRow(_ measure: IngredientMeasure) -> some View {
+        if case .portion(let portion) = measure {
+            Text("\(measure.title) (\(portion.grams.cleanString) \(food.measureBase.rawValue))")
+        } else {
+            Text(measure.title)
+        }
+    }
+
+    /// Ao trocar de medida, mantém aproximadamente a mesma quantidade (100 g → 3,5 scoops, e não 100 scoops).
+    private func convertAmount(from old: IngredientMeasure?) {
+        guard let old, let amount, amount > 0, !isToTaste else { return }
+        let oldIngredient = Ingredient(food: food, amount: amount, measure: old, snapshot: snapshot)
+        let unitIngredient = Ingredient(food: food, amount: 1, measure: measure, snapshot: snapshot)
+        guard let grams = snapshot.grams(for: oldIngredient), grams > 0,
+              let perUnit = snapshot.grams(for: unitIngredient), perUnit > 0
+        else { return }
+        let converted = grams / perUnit
+        switch measure {
+        case .unit(.gram), .unit(.milliliter):
+            self.amount = converted.rounded()
+        default:
+            self.amount = max(0.5, (converted * 2).rounded() / 2)
+        }
+    }
 
     private var conversionNote: String? {
-        switch unit {
-        case .unit: food.unitWeight.map { "1 unidade ≈ \($0.cleanString) \(food.measureBase.rawValue)" }
-        case .tablespoon: "1 colher de sopa ≈ 15 \(food.measureBase.rawValue)"
-        case .teaspoon: "1 colher de chá ≈ 5 \(food.measureBase.rawValue)"
-        case .toTaste: "Quantidades “q.b.” não contam para os valores nutricionais."
-        case .gram, .milliliter: nil
+        let base = food.measureBase.rawValue
+        let one = Ingredient(food: food, amount: 1, measure: measure, snapshot: snapshot)
+        let grams = snapshot.grams(for: one)?.cleanString ?? "—"
+        switch measure {
+        case .portion(let portion): return "1 \(portion.name) = \(grams) \(base)"
+        case .unit(.unit): return "1 unidade ≈ \(grams) \(base)"
+        case .unit(.tablespoon): return "1 colher de sopa ≈ \(grams) \(base)"
+        case .unit(.teaspoon): return "1 colher de chá ≈ \(grams) \(base)"
+        case .unit(.toTaste): return "Quantidades “q.b.” não contam para os valores nutricionais."
+        case .unit: return nil
         }
     }
 
@@ -159,18 +214,19 @@ struct IngredientQuantityView: View {
             }
 
             Section {
-                if unit != .toTaste {
+                if !isToTaste {
                     HStack {
                         NumberField(placeholder: "Quantidade", value: $amount, focusOnAppear: true)
                             .font(.title2.weight(.semibold))
-                        Text(unit.rawValue)
+                        Text(measureLabel)
                             .font(.title3)
                             .foregroundStyle(.secondary)
+                            .contentTransition(.numericText())
                     }
                 }
-                Picker("Unidade", selection: $unit) {
-                    ForEach(units) { unit in
-                        Text(unit.title).tag(unit)
+                Picker("Medida", selection: $measureID) {
+                    ForEach(measures) { measure in
+                        measureRow(measure).tag(measure.id)
                     }
                 }
             } header: {
@@ -180,8 +236,11 @@ struct IngredientQuantityView: View {
                     Text(conversionNote)
                 }
             }
+            .onChange(of: measureID) { oldID, _ in
+                convertAmount(from: measures.first { $0.id == oldID })
+            }
 
-            if unit != .toTaste {
+            if !isToTaste {
                 Section("Nutrição desta quantidade") {
                     if let facts = NutritionCalculator.facts(for: ingredient, food: food) {
                         MacroStrip(facts: facts)

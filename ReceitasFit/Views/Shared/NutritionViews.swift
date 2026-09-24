@@ -122,12 +122,13 @@ struct OptionalDecimalFieldRow: View {
     let title: String
     let unit: String
     @Binding var value: Double?
+    var placeholder = "—"
 
     var body: some View {
         HStack {
             Text(title)
             Spacer()
-            NumberField(placeholder: "—", value: $value, maxFractionDigits: 1)
+            NumberField(placeholder: placeholder, value: $value, maxFractionDigits: 1)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 90)
             Text(unit)
