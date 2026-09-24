@@ -12,17 +12,42 @@ struct RecipeEditorView: View {
 
     @State private var draft: RecipeDraft
     @State private var photoItem: PhotosPickerItem?
+    /// Fotografia descodificada uma vez (e não a cada redesenho do formulário).
+    @State private var photoImage: UIImage?
     @State private var isLoadingPhoto = false
+    @State private var showingPhotoLibrary = false
+    @State private var importingPhoto = false
+    @State private var showingCamera = false
+    @State private var showingFocusEditor = ScreenshotMode.flag("screenshotPhotoFocus")
     @State private var confirmDiscard = false
     @State private var showingPicker = false
     @State private var editingIngredient: Ingredient?
     @State private var newTag = ""
+    private let isDuplicate: Bool
 
     init(recipe: Recipe? = nil) {
         self.recipe = recipe
-        let initial = recipe.map { RecipeDraft(recipe: $0) } ?? RecipeDraft()
+        self.isDuplicate = false
+        var initial = recipe.map { RecipeDraft(recipe: $0) } ?? RecipeDraft()
+        self.original = initial
+        // Capturas automáticas do CI: as receitas de exemplo não têm fotografia.
+        if ScreenshotMode.flag("screenshotPhotoFocus"), initial.photoData == nil {
+            initial.photoData = PhotoFocusEditor.demoImage().jpegData(compressionQuality: 0.9)
+            initial.photoFocusX = 0.3
+            initial.photoFocusY = 0.62
+        }
+        _draft = State(initialValue: initial)
+        _photoImage = State(initialValue: (initial.photoData ?? initial.thumbnailData).flatMap(UIImage.init(data:)))
+    }
+
+    /// Receita nova a partir de uma cópia de outra. Cancelar não cria nada.
+    init(duplicating source: Recipe) {
+        self.recipe = nil
+        self.isDuplicate = true
+        let initial = RecipeDraft(duplicating: source)
         self.original = initial
         _draft = State(initialValue: initial)
+        _photoImage = State(initialValue: (initial.photoData ?? initial.thumbnailData).flatMap(UIImage.init(data:)))
     }
 
     private var hasChanges: Bool { draft != original }
@@ -56,7 +81,7 @@ struct RecipeEditorView: View {
                     proxy.scrollTo("ingredients", anchor: .top)
                 }
             }
-            .navigationTitle(recipe == nil ? "Nova receita" : "Editar receita")
+            .navigationTitle(isDuplicate ? "Cópia da receita" : recipe == nil ? "Nova receita" : "Editar receita")
             .navigationBarTitleDisplayMode(.inline)
             .keyboardDoneButton()
             .toolbar {
@@ -95,15 +120,19 @@ struct RecipeEditorView: View {
 
     private var photoSection: some View {
         Section {
-            PhotosPicker(selection: $photoItem, matching: .images) {
+            Menu {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("Tirar fotografia", systemImage: "camera") { showingCamera = true }
+                }
+                Button("Escolher da galeria", systemImage: "photo.on.rectangle") { showingPhotoLibrary = true }
+                Button("Escolher dos Ficheiros", systemImage: "folder") { importingPhoto = true }
+            } label: {
                 Color.clear
                     .frame(height: 220)
                     .frame(maxWidth: .infinity)
                     .overlay {
-                        if let data = draft.photoData ?? draft.thumbnailData, let image = UIImage(data: data) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
+                        if let photoImage {
+                            FocusedImage(image: photoImage, focus: UnitPoint(x: draft.photoFocusX, y: draft.photoFocusY))
                         } else {
                             ZStack {
                                 Rectangle().fill(draft.category.color.gradient)
@@ -113,6 +142,17 @@ struct RecipeEditorView: View {
                                 }
                                 .foregroundStyle(.white)
                             }
+                        }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        if photoImage != nil && !isLoadingPhoto {
+                            Label("Trocar", systemImage: "arrow.triangle.2.circlepath.camera")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .glassEffect(.regular, in: .capsule)
+                                .padding(12)
                         }
                     }
                     .overlay {
@@ -130,13 +170,35 @@ struct RecipeEditorView: View {
             .listRowInsets(EdgeInsets())
 
             if draft.photoData != nil {
+                Button("Ajustar enquadramento", systemImage: "viewfinder") { showingFocusEditor = true }
                 Button("Remover fotografia", systemImage: "trash", role: .destructive) {
                     withAnimation {
                         draft.photoData = nil
                         draft.thumbnailData = nil
+                        draft.photoFocusX = 0.5
+                        draft.photoFocusY = 0.5
                         photoItem = nil
+                        photoImage = nil
                     }
                 }
+            }
+        }
+        .photosPicker(isPresented: $showingPhotoLibrary, selection: $photoItem, matching: .images)
+        .fileImporter(isPresented: $importingPhoto, allowedContentTypes: [.image]) { result in
+            guard case .success(let url) = result else { return }
+            let hasAccess = url.startAccessingSecurityScopedResource()
+            defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
+            if let data = try? Data(contentsOf: url) { usePhoto(data) }
+        }
+        .fullScreenCover(isPresented: $showingCamera) {
+            CameraPicker { image in
+                if let data = image.jpegData(compressionQuality: 0.95) { usePhoto(data) }
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showingFocusEditor) {
+            if let photoImage {
+                PhotoFocusEditor(image: photoImage, focusX: $draft.photoFocusX, focusY: $draft.photoFocusY)
             }
         }
     }
@@ -371,17 +433,28 @@ struct RecipeEditorView: View {
 
     private func loadPhoto(_ item: PhotosPickerItem?) {
         guard let item else { return }
-        isLoadingPhoto = true
         Task {
             if let data = try? await item.loadTransferable(type: Data.self) {
-                let processed = await Task.detached(priority: .userInitiated) {
-                    ImageProcessing.prepare(data)
-                }.value
-                if let processed {
-                    withAnimation {
-                        draft.photoData = processed.photo
-                        draft.thumbnailData = processed.thumbnail
-                    }
+                usePhoto(data)
+            }
+        }
+    }
+
+    /// Prepara a fotografia (redimensionada, com miniatura) fora da thread principal.
+    /// Uma fotografia nova começa com o foco ao centro.
+    private func usePhoto(_ data: Data) {
+        isLoadingPhoto = true
+        Task {
+            let processed = await Task.detached(priority: .userInitiated) {
+                ImageProcessing.prepare(data)
+            }.value
+            if let processed {
+                withAnimation {
+                    draft.photoData = processed.photo
+                    draft.thumbnailData = processed.thumbnail
+                    draft.photoFocusX = 0.5
+                    draft.photoFocusY = 0.5
+                    photoImage = UIImage(data: processed.photo)
                 }
             }
             isLoadingPhoto = false

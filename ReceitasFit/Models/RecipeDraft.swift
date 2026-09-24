@@ -17,6 +17,9 @@ struct RecipeDraft: Equatable {
     var steps: [RecipeStep] = []
     var photoData: Data?
     var thumbnailData: Data?
+    /// Ponto de foco da fotografia (0…1), que fica sempre à vista nos recortes.
+    var photoFocusX = 0.5
+    var photoFocusY = 0.5
     /// Valores introduzidos à mão em versões antigas da app (só para mostrar enquanto não há ingredientes ligados).
     var legacyNutrition = NutritionFacts.zero
 
@@ -36,7 +39,15 @@ struct RecipeDraft: Equatable {
         steps = recipe.steps
         photoData = recipe.photoData
         thumbnailData = recipe.thumbnailData
+        photoFocusX = recipe.photoFocusX
+        photoFocusY = recipe.photoFocusY
         legacyNutrition = recipe.nutritionIsComputed ? .zero : recipe.perServing
+    }
+
+    /// Cópia de uma receita para guardar como receita nova (o título indica que é uma cópia).
+    init(duplicating recipe: Recipe) {
+        self.init(recipe: recipe)
+        title = "\(recipe.title.trimmed) (cópia)"
     }
 
     var isValid: Bool { !title.trimmed.isEmpty }
@@ -59,6 +70,8 @@ struct RecipeDraft: Equatable {
             recipe.photoData = photoData
             recipe.thumbnailData = thumbnailData
         }
+        recipe.photoFocusX = min(1, max(0, photoFocusX))
+        recipe.photoFocusY = min(1, max(0, photoFocusY))
         NutritionCalculator.update(recipe, foods: foods)
         recipe.updatedAt = .now
     }

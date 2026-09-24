@@ -12,6 +12,8 @@ struct RecipeDetailView: View {
     @State private var checkedIngredients: Set<UUID> = []
     @State private var completedSteps: Set<UUID> = []
     @State private var showingEditor = false
+    @State private var showingDuplicate = false
+    @State private var showingShare = ScreenshotMode.flag("screenshotShare")
     @State private var confirmDelete = false
     @State private var showsCompactTitle = false
 
@@ -77,6 +79,12 @@ struct RecipeDetailView: View {
         .background(Color(.systemBackground))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .sheet(isPresented: $showingDuplicate) {
+            RecipeEditorView(duplicating: recipe)
+        }
+        .sheet(isPresented: $showingShare) {
+            RecipeShareView(recipe: recipe)
+        }
         .sheet(isPresented: $showingEditor) {
             RecipeEditorView(recipe: recipe)
         }
@@ -426,9 +434,8 @@ struct RecipeDetailView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button("Editar", systemImage: "pencil") { showingEditor = true }
-                ShareLink(item: recipe.shareText) {
-                    Label("Partilhar", systemImage: "square.and.arrow.up")
-                }
+                Button("Duplicar", systemImage: "plus.square.on.square") { showingDuplicate = true }
+                Button("Partilhar", systemImage: "square.and.arrow.up") { showingShare = true }
                 Divider()
                 Button("Apagar", systemImage: "trash", role: .destructive) { confirmDelete = true }
             } label: {

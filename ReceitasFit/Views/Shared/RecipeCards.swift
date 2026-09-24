@@ -127,6 +127,8 @@ struct RecipeGrid: View {
 
     @Environment(\.modelContext) private var context
     @State private var pendingDeletion: Recipe?
+    @State private var duplicating: Recipe?
+    @State private var sharing: Recipe?
 
     // Alinhados pelo topo: os títulos têm uma ou duas linhas e as fotografias devem ficar à mesma altura.
     private let columns = [GridItem(.flexible(), spacing: 14, alignment: .top), GridItem(.flexible(), spacing: 14, alignment: .top)]
@@ -147,9 +149,8 @@ struct RecipeGrid: View {
                         Haptics.tap()
                         withAnimation { recipe.isFavorite.toggle() }
                     }
-                    ShareLink(item: recipe.shareText) {
-                        Label("Partilhar", systemImage: "square.and.arrow.up")
-                    }
+                    Button("Duplicar", systemImage: "plus.square.on.square") { duplicating = recipe }
+                    Button("Partilhar", systemImage: "square.and.arrow.up") { sharing = recipe }
                     Divider()
                     Button("Apagar", systemImage: "trash", role: .destructive) {
                         pendingDeletion = recipe
@@ -158,6 +159,12 @@ struct RecipeGrid: View {
             }
         }
         .padding(.horizontal)
+        .sheet(item: $duplicating) { recipe in
+            RecipeEditorView(duplicating: recipe)
+        }
+        .sheet(item: $sharing) { recipe in
+            RecipeShareView(recipe: recipe)
+        }
         .alert(
             "Apagar receita?",
             isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),

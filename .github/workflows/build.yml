@@ -255,6 +255,9 @@ jobs:
           shot 20-rever-embalagem -tab foods -screenshotScanner YES -screenshotScannerReview YES
           shot 21-gemini-ativo -screenshotSettings YES -screenshotGeminiState on
           shot 22-gemini-sem-chave -screenshotSettings YES -screenshotGeminiState off
+          shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
+          shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
+          shot 26-partilhar-stories -screenshotOpenFirst YES -screenshotShare YES -screenshotShareFormat story
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES
