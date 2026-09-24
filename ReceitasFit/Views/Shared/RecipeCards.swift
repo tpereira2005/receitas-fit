@@ -38,7 +38,7 @@ struct RecipeCard: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(recipe.title)
                     .font(.subheadline.weight(.semibold))
-                    .lineLimit(2, reservesSpace: true)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Text(recipe.cardFacts)
                     .font(.caption)
@@ -143,6 +143,7 @@ struct RecipeGrid: View {
                         recipe.isFavorite ? "Remover das favoritas" : "Adicionar às favoritas",
                         systemImage: recipe.isFavorite ? "heart.slash" : "heart"
                     ) {
+                        Haptics.tap()
                         withAnimation { recipe.isFavorite.toggle() }
                     }
                     ShareLink(item: recipe.shareText) {
@@ -162,6 +163,7 @@ struct RecipeGrid: View {
             presenting: pendingDeletion
         ) { recipe in
             Button("Apagar", role: .destructive) {
+                Haptics.warning()
                 withAnimation { context.delete(recipe) }
                 try? context.save()
             }

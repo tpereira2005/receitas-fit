@@ -58,6 +58,7 @@ struct RecipeEditorView: View {
             }
             .navigationTitle(recipe == nil ? "Nova receita" : "Editar receita")
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardDoneButton()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar", systemImage: "xmark", role: .cancel) {
@@ -400,6 +401,7 @@ struct RecipeEditorView: View {
         }
         draft.apply(to: target, foods: foodIndex)
         try? context.save()
+        Haptics.success()
         dismiss()
     }
 }

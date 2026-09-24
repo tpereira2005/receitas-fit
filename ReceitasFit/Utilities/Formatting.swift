@@ -19,8 +19,10 @@ nonisolated enum Format {
 
 extension Double {
     /// Número sem casas decimais desnecessárias ("12" em vez de "12,0").
+    /// Uma casa decimal; abaixo de 1 usa duas, para que valores pequenos (sal, p. ex.) não fiquem arredondados a 0.
     nonisolated var cleanString: String {
-        formatted(.number.precision(.fractionLength(0...1)))
+        let digits = abs(self) < 1 && self != 0 ? 2 : 1
+        return formatted(.number.precision(.fractionLength(0...digits)))
     }
 }
 

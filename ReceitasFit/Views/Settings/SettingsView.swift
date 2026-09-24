@@ -11,6 +11,9 @@ struct SettingsView: View {
     @State private var exportDocument: BackupDocument?
     @State private var isExporting = false
     @State private var isImporting = false
+    @State private var isChoosingFolder = false
+    @State private var confirmDisableAuto = false
+    private let autoBackup = AutoBackup.shared
     @State private var message: String?
 
     private var appVersion: String {
@@ -34,6 +37,8 @@ struct SettingsView: View {
                     LabeledContent("Com fotografia", value: "\(recipes.filter { $0.thumbnailData != nil }.count)")
                 }
 
+                autoBackupSection
+
                 Section {
                     Button("Exportar cópia de segurança", systemImage: "square.and.arrow.up", action: export)
                         .disabled(recipes.isEmpty && foods.isEmpty)
@@ -43,7 +48,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Cópia de segurança")
                 } footer: {
-                    Text("As receitas e os alimentos ficam guardados apenas neste iPhone. Exporta regularmente um ficheiro para a app Ficheiros ou para o iCloud Drive para nunca perderes nada.")
+                    Text("Exporta um ficheiro quando quiseres, por exemplo antes de mudar de iPhone. A importação só acrescenta o que ainda não existe na app.")
                 }
 
                 Section {
@@ -83,6 +88,17 @@ struct SettingsView: View {
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
                 handleImport(result)
             }
+            .background {
+                // Um segundo seletor no mesmo modificador não abre; fica numa vista à parte.
+                Color.clear.fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder]) { result in
+                    handleFolder(result)
+                }
+            }
+            .confirmationDialog("Desativar as cópias automáticas?", isPresented: $confirmDisableAuto, titleVisibility: .visible) {
+                Button("Desativar", role: .destructive) { autoBackup.disable() }
+            } message: {
+                Text("As cópias que já estão na pasta não são apagadas.")
+            }
             .alert(
                 "Receitas",
                 isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })
@@ -91,6 +107,71 @@ struct SettingsView: View {
             } message: {
                 Text(message ?? "")
             }
+        }
+    }
+
+    // MARK: - Cópias automáticas
+
+    @ViewBuilder
+    private var autoBackupSection: some View {
+        Section {
+            if let folder = autoBackup.folderName, autoBackup.isEnabled {
+                LabeledContent("Pasta") {
+                    Label(folder, systemImage: "folder")
+                }
+                LabeledContent("Última cópia") {
+                    if autoBackup.isRunning {
+                        ProgressView()
+                    } else if let date = autoBackup.lastDate {
+                        Text(date, format: .relative(presentation: .named))
+                    } else {
+                        Text("Ainda nenhuma")
+                    }
+                }
+                if let error = autoBackup.lastError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                }
+                Button("Fazer cópia agora", systemImage: "arrow.clockwise.icloud") {
+                    Task {
+                        if await autoBackup.run(context: context, force: true) {
+                            Haptics.success()
+                            message = "Cópia guardada em “\(folder)”."
+                        } else {
+                            Haptics.warning()
+                        }
+                    }
+                }
+                .disabled(autoBackup.isRunning)
+                Button("Mudar de pasta", systemImage: "folder.badge.gearshape") { isChoosingFolder = true }
+                Button("Desativar", systemImage: "xmark.circle", role: .destructive) { confirmDisableAuto = true }
+            } else {
+                Button("Escolher pasta", systemImage: "folder.badge.plus") { isChoosingFolder = true }
+            }
+        } header: {
+            Text("Cópias automáticas")
+        } footer: {
+            Text("Uma vez por dia, quando abres ou sais da app, e só se algo mudou. Ficam as \(AutoBackup.keepCount) cópias mais recentes, com as fotografias. Escolhe uma pasta no iCloud Drive (por exemplo “Receitas”) para as teres fora do iPhone.")
+        }
+    }
+
+    private func handleFolder(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            do {
+                try autoBackup.setFolder(url)
+                Task {
+                    if await autoBackup.run(context: context, force: true) {
+                        Haptics.success()
+                        message = "Cópias automáticas ativadas. A primeira já está em “\(url.lastPathComponent)”."
+                    }
+                }
+            } catch {
+                message = "Não foi possível usar esta pasta: \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            message = error.localizedDescription
         }
     }
 

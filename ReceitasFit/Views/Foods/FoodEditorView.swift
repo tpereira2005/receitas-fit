@@ -107,6 +107,7 @@ struct FoodEditorView: View {
             }
             .navigationTitle(food == nil ? "Novo alimento" : "Editar alimento")
             .navigationBarTitleDisplayMode(.inline)
+            .keyboardDoneButton()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar", systemImage: "xmark", role: .cancel) {
@@ -229,6 +230,7 @@ struct FoodEditorView: View {
                 return
             }
         }
+        Haptics.success()
         dismiss()
     }
 }

@@ -28,6 +28,7 @@ enum AppTab: String, Hashable {
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("didSeedSamples") private var didSeedSamples = false
     @AppStorage("dataVersion") private var dataVersion = 0
 
@@ -53,7 +54,15 @@ struct RootView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .task { prepareData() }
+        .task {
+            prepareData()
+            await AutoBackup.shared.runIfDue(context: context)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                Task { await AutoBackup.shared.runIfDue(context: context) }
+            }
+        }
     }
 
     private func prepareData() {

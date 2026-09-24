@@ -14,7 +14,10 @@ struct MacroValue: Identifiable {
 
 struct NutritionCard: View {
     let perServing: NutritionFacts
+    /// Porções escolhidas no seletor da receita (a vista "Receita" mostra o total para estas porções).
     let servings: Int
+    /// Porções com que a receita foi guardada.
+    var originalServings: Int? = nil
     var note: String?
 
     @State private var showsWholeRecipe = false
@@ -31,6 +34,16 @@ struct NutritionCard: View {
             MacroValue(id: "fat", name: "Gordura", grams: facts.fat, kcalPerGram: 9, color: .teal,
                        detail: "saturada \(facts.saturatedFat.cleanString) g"),
         ]
+    }
+
+    private var footnote: String {
+        let original = originalServings ?? servings
+        if showsWholeRecipe {
+            return servings == original
+                ? "Receita toda · \(Format.servings(servings))"
+                : "Receita ajustada para \(Format.servings(servings)) · original: \(Format.servings(original))"
+        }
+        return "Por porção · a receita rende \(Format.servings(original))"
     }
 
     private var macroCalories: Double { macros.reduce(0) { $0 + $1.kcal } }
@@ -95,7 +108,7 @@ struct NutritionCard: View {
                 }
             }
 
-            Text(showsWholeRecipe ? "Receita toda · \(Format.servings(servings))" : "Por porção · a receita rende \(Format.servings(servings))")
+            Text(footnote)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .contentTransition(.opacity)

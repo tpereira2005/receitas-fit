@@ -97,7 +97,6 @@ struct IngredientQuantityView: View {
     private let keptSnapshot: FoodSnapshot?
     @State private var amount: Double?
     @State private var unit: IngredientUnit
-    @FocusState private var amountFocused: Bool
 
     init(food: Food, initial: Ingredient?, confirmTitle: String, showsCancel: Bool = false, onConfirm: @escaping (Ingredient) -> Void) {
         self.food = food
@@ -162,10 +161,8 @@ struct IngredientQuantityView: View {
             Section {
                 if unit != .toTaste {
                     HStack {
-                        TextField("Quantidade", value: $amount, format: .number.precision(.fractionLength(0...2)))
-                            .keyboardType(.decimalPad)
+                        NumberField(placeholder: "Quantidade", value: $amount, focusOnAppear: true)
                             .font(.title2.weight(.semibold))
-                            .focused($amountFocused)
                         Text(unit.rawValue)
                             .font(.title3)
                             .foregroundStyle(.secondary)
@@ -198,6 +195,7 @@ struct IngredientQuantityView: View {
         }
         .navigationTitle(food.name)
         .navigationBarTitleDisplayMode(.inline)
+        .keyboardDoneButton()
         .toolbar {
             if showsCancel {
                 ToolbarItem(placement: .cancellationAction) {
@@ -209,6 +207,5 @@ struct IngredientQuantityView: View {
                     .disabled(!canConfirm)
             }
         }
-        .onAppear { amountFocused = unit != .toTaste }
     }
 }

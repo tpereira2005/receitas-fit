@@ -99,6 +99,7 @@ struct FoodsView: View {
     }
 
     private func delete(_ food: Food) {
+        Haptics.warning()
         context.delete(food)
         try? context.save()
     }

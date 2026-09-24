@@ -8,6 +8,7 @@ struct FoodDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
+    @State private var showsTitle = false
     @State private var showingEditor = false
     @State private var confirmDelete = false
     @State private var showingReview = false
@@ -82,7 +83,13 @@ struct FoodDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(food.name)
+        // O nome já aparece no cabeçalho; na barra só surge depois de o cabeçalho sair do ecrã.
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y + geometry.contentInsets.top > 60
+        } action: { _, isPastHeader in
+            withAnimation(.easeInOut(duration: 0.2)) { showsTitle = isPastHeader }
+        }
+        .navigationTitle(showsTitle ? food.name : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -170,6 +177,7 @@ struct FoodDetailView: View {
     }
 
     private func deleteFood() {
+        Haptics.warning()
         context.delete(food)
         try? context.save()
         dismiss()

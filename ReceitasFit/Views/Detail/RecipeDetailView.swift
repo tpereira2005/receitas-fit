@@ -89,6 +89,12 @@ struct RecipeDetailView: View {
         .onChange(of: recipe.servings) { _, newValue in
             servings = max(1, newValue)
         }
+        .sensoryFeedback(.selection, trigger: servings)
+        .sensoryFeedback(.impact(weight: .light), trigger: checkedIngredients)
+        .sensoryFeedback(.impact(weight: .light), trigger: completedSteps)
+        .sensoryFeedback(trigger: recipe.isFavorite) { _, isFavorite in
+            isFavorite ? .success : .impact(weight: .light)
+        }
     }
 
     // MARK: - Fotografia
@@ -190,7 +196,7 @@ struct RecipeDetailView: View {
                 note = "Valores introduzidos à mão. Edita a receita e escolhe os ingredientes da biblioteca para passarem a ser calculados."
             }
         }
-        return NutritionCard(perServing: perServing, servings: recipe.servings, note: note)
+        return NutritionCard(perServing: perServing, servings: servings, originalServings: recipe.servings, note: note)
     }
 
     // MARK: - Ingredientes
@@ -374,12 +380,18 @@ struct RecipeDetailView: View {
                 }
                 .buttonStyle(.glass)
             }
-            Text("Adicionada a \(recipe.createdAt.formatted(date: .long, time: .omitted))")
+            Text(datesText)
                 .font(.footnote)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 6)
         }
+    }
+
+    private var datesText: String {
+        let added = "Adicionada a \(recipe.createdAt.formatted(date: .long, time: .omitted))"
+        guard !Calendar.current.isDate(recipe.updatedAt, inSameDayAs: recipe.createdAt) else { return added }
+        return added + " · editada a \(recipe.updatedAt.formatted(date: .long, time: .omitted))"
     }
 
     private func sourceTitle(for url: URL) -> String {
@@ -426,6 +438,7 @@ struct RecipeDetailView: View {
     }
 
     private func deleteRecipe() {
+        Haptics.warning()
         context.delete(recipe)
         try? context.save()
         dismiss()
