@@ -117,12 +117,13 @@ struct PackageReadingTests {
 
     /// Mostra no registo do CI o que o Vision leu (para afinar a leitura).
     private func log(_ name: String, _ result: PackageReader.PhotoResult) {
-        print("OCR[\(name)] rows:")
-        for row in result.rows { print("OCR[\(name)]   " + row.joined(separator: " | ")) }
-        for box in result.boxes {
-            print(String(format: "OCR[%@] box x=%.3f-%.3f y=%.3f h=%.3f a=%.2f° %@",
-                         name, box.minX, box.maxX, box.midY, box.height, box.angle * 180 / .pi, box.text))
-        }
+        // Temporário: o registo do CI só mostra "issues", não o que se imprime.
+        let rows = result.rows.map { $0.joined(separator: " | ") }.joined(separator: " // ")
+        let boxes = result.boxes.map {
+            String(format: "[%.3f-%.3f y%.3f h%.3f a%.2f %@]", $0.minX, $0.maxX, $0.midY, $0.height, $0.angle * 180 / .pi, $0.text)
+        }.joined(separator: " ")
+        Issue.record("OCR \(name) ROWS: \(rows)")
+        Issue.record("OCR \(name) BOXES: \(boxes)")
     }
 
     private func image(_ name: String) throws -> UIImage {
