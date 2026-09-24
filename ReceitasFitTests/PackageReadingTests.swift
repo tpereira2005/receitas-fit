@@ -115,15 +115,17 @@ struct PackageReadingTests {
 
     // MARK: - Fotografias reais (Vision no simulador)
 
-    /// Mostra no registo do CI o que o Vision leu (para afinar a leitura).
+    /// Guarda o que o Vision leu num ficheiro no Mac do CI (o simulador escreve na pasta do utilizador
+    /// do Mac), que o workflow mostra no registo. Serve para afinar a leitura quando um teste falha.
     private func log(_ name: String, _ result: PackageReader.PhotoResult) {
-        // Temporário: o registo do CI só mostra "issues", não o que se imprime.
-        let rows = result.rows.map { $0.joined(separator: " | ") }.joined(separator: " // ")
-        let boxes = result.boxes.map {
-            String(format: "[%.3f-%.3f y%.3f h%.3f a%.2f %@]", $0.minX, $0.maxX, $0.midY, $0.height, $0.angle * 180 / .pi, $0.text)
-        }.joined(separator: " ")
-        Issue.record("OCR \(name) ROWS: \(rows)")
-        Issue.record("OCR \(name) BOXES: \(boxes)")
+        guard let home = ProcessInfo.processInfo.environment["SIMULATOR_HOST_HOME"] else { return }
+        var lines = ["== \(name)", "-- filas"]
+        lines += result.rows.map { "  " + $0.joined(separator: " | ") }
+        lines.append("-- blocos (x inicial-final, y, altura, ângulo)")
+        lines += result.boxes.map {
+            String(format: "  %.3f-%.3f  y %.3f  h %.3f  %+.2f°  %@", $0.minX, $0.maxX, $0.midY, $0.height, $0.angle * 180 / .pi, $0.text)
+        }
+        try? lines.joined(separator: "\n").write(toFile: "\(home)/receitas-ocr-\(name).txt", atomically: true, encoding: .utf8)
     }
 
     private func image(_ name: String) throws -> UIImage {

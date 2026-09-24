@@ -53,6 +53,10 @@ jobs:
           set -o pipefail
           xcodebuild test             -project ReceitasFit.xcodeproj             -scheme "$SCHEME"             -destination "id=$UDID"             -derivedDataPath build             | xcbeautify --renderer github-actions
 
+      - name: Texto lido nas fotografias de teste
+        if: always()
+        run: cat ~/receitas-ocr-*.txt 2>/dev/null || echo "Sem registo de leitura."
+
   ipa:
     name: IPA e fonte do SideStore
     needs: tests
