@@ -9,6 +9,7 @@ struct FoodsView: View {
     @State private var searchText = ""
     @State private var path = NavigationPath()
     @State private var showingEditor = false
+    @State private var showingScanner = ScreenshotMode.flag("screenshotScanner")
     @State private var pendingDeletion: Food?
     @Namespace private var namespace
 
@@ -29,6 +30,8 @@ struct FoodsView: View {
                     } actions: {
                         Button("Novo alimento", systemImage: "plus") { showingEditor = true }
                             .buttonStyle(.glassProminent)
+                        Button("Ler embalagem", systemImage: "barcode.viewfinder") { showingScanner = true }
+                            .buttonStyle(.glass)
                     }
                 } else {
                     list
@@ -37,9 +40,13 @@ struct FoodsView: View {
             .navigationTitle("Alimentos")
             .searchable(text: $searchText, prompt: "Procurar alimento")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("Ler embalagem", systemImage: "barcode.viewfinder") { showingScanner = true }
                     Button("Novo alimento", systemImage: "plus") { showingEditor = true }
                 }
+            }
+            .sheet(isPresented: $showingScanner) {
+                PackageScanView()
             }
             .navigationDestination(for: Food.self) { food in
                 FoodDetailView(food: food, namespace: namespace)

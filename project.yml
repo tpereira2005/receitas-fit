@@ -41,6 +41,7 @@ targets:
         CFBundleDevelopmentRegion: pt-PT
         CFBundleLocalizations: [pt-PT]
         ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: A câmara é usada para fotografar embalagens e ler a informação nutricional.
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

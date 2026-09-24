@@ -26,12 +26,27 @@ struct FoodEditorView: View {
     @State private var isProcessingImage = false
     @State private var imageError: String?
 
+    /// Leitura de uma embalagem que preencheu este alimento novo (para rever antes de guardar).
+    private let reading: PackageReading?
+    @State private var showsRecognizedText = false
+
     init(food: Food?, onSave: ((Food) -> Void)? = nil) {
         self.food = food
         self.onSave = onSave
+        self.reading = nil
         let initial = food.map { FoodDraft(food: $0) } ?? FoodDraft()
         self.original = initial
         _draft = State(initialValue: initial)
+    }
+
+    /// Alimento novo preenchido a partir das fotografias da embalagem.
+    init(reading: PackageReading, onSave: ((Food) -> Void)? = nil) {
+        self.food = nil
+        self.onSave = onSave
+        self.reading = reading
+        // Parte de um alimento vazio: sair sem guardar pede sempre confirmação.
+        self.original = FoodDraft()
+        _draft = State(initialValue: reading.draft)
     }
 
     private var hasChanges: Bool { draft != original }
@@ -51,6 +66,10 @@ struct FoodEditorView: View {
         NavigationStack {
             ScrollViewReader { proxy in
             Form {
+                if let reading {
+                    readingSection(reading)
+                }
+
                 Section("Alimento") {
                     TextField("Nome (ex.: Peito de frango)", text: $draft.name)
                         .font(.headline)
@@ -174,6 +193,92 @@ struct FoodEditorView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Leitura da embalagem
+
+    @ViewBuilder
+    private func readingSection(_ reading: PackageReading) -> some View {
+        Section {
+            readingStatus(reading)
+
+            ForEach(reading.conflicts) { conflict in
+                let current = draft.facts[keyPath: conflict.nutrient.keyPath]
+                VStack(alignment: .leading, spacing: 6) {
+                    Label {
+                        Text("\(conflict.nutrient.title): rótulo \(conflict.labelValue.cleanString) \(conflict.nutrient.unit) · Open Food Facts \(conflict.databaseValue.cleanString) \(conflict.nutrient.unit)")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    }
+                    .font(.subheadline)
+                    HStack {
+                        Button("Rótulo") { draft.facts[keyPath: conflict.nutrient.keyPath] = conflict.labelValue }
+                            .buttonStyle(.bordered)
+                            .tint(current == conflict.labelValue ? .accentColor : .secondary)
+                        Button("Open Food Facts") { draft.facts[keyPath: conflict.nutrient.keyPath] = conflict.databaseValue }
+                            .buttonStyle(.bordered)
+                            .tint(current == conflict.databaseValue ? .accentColor : .secondary)
+                    }
+                    .font(.footnote.weight(.semibold))
+                }
+                .padding(.vertical, 2)
+            }
+
+            if !reading.missing.isEmpty {
+                Label {
+                    Text("Não encontrado: \(reading.missing.map { $0.title.lowercased() }.formatted(.list(type: .and))). Confirma com o rótulo.")
+                } icon: {
+                    Image(systemName: "questionmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .font(.subheadline)
+            }
+
+            if !reading.recognizedRows.isEmpty {
+                DisclosureGroup("Texto lido", isExpanded: $showsRecognizedText) {
+                    Text(reading.recognizedRows.map { $0.joined(separator: "  ·  ") }.joined(separator: "\n"))
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                .font(.subheadline)
+            }
+        } header: {
+            Text("Leitura da embalagem")
+        } footer: {
+            Text("Confirma cada valor com a embalagem. Nada fica guardado até tocares em Guardar; as fotografias e o código de barras não são guardados.")
+        }
+    }
+
+    @ViewBuilder
+    private func readingStatus(_ reading: PackageReading) -> some View {
+        let fromLabel = reading.sources.values.filter { $0 == .label }.count
+        let fromDatabase = reading.sources.values.filter { $0 == .openFoodFacts }.count
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(fromLabel > 0
+                     ? "Rótulo: \(fromLabel) de \(Nutrient.allCases.count) valores lidos"
+                     : "Não foi possível ler a tabela nutricional")
+            } icon: {
+                Image(systemName: fromLabel > 0 ? "text.viewfinder" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(fromLabel > 0 ? Color.accentColor : .orange)
+            }
+            Label {
+                switch reading.databaseStatus {
+                case .found(let name):
+                    Text("Open Food Facts: \(name.isEmpty ? "produto encontrado" : name)\(fromDatabase > 0 ? " · completou \(fromDatabase) valores" : "")")
+                case .notFound:
+                    Text("Open Food Facts: produto não encontrado")
+                case .unavailable:
+                    Text("Open Food Facts: sem ligação à internet")
+                case .noBarcode:
+                    Text("Sem código de barras nas fotografias")
+                }
+            } icon: {
+                Image(systemName: "barcode.viewfinder")
+                    .foregroundStyle(reading.databaseStatus == .noBarcode ? Color.secondary : Color.accentColor)
+            }
+        }
+        .font(.subheadline)
     }
 
     // MARK: - Porções
