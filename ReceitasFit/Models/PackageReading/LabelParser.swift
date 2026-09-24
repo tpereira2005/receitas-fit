@@ -68,6 +68,9 @@ nonisolated enum LabelParser {
     static func parse(rows: [[String]]) -> PartialFacts {
         var result = PartialFacts()
         let normalizedRows = rows.map { $0.map(normalize) }
+        /// Fila onde cada nutriente foi encontrado, e filas com valores mas sem nome reconhecido.
+        var rowOf: [Nutrient: Int] = [:]
+        var unlabeled: [Int] = []
 
         for (index, cells) in normalizedRows.enumerated() {
             let joined = cells.joined(separator: " ")
@@ -75,8 +78,12 @@ nonisolated enum LabelParser {
                 if joined.contains("100 ml") || joined.contains("100ml") { result.base = .milliliters }
                 else if joined.contains("100 g") || joined.contains("100g") { result.base = .grams }
             }
-            guard let (nutrient, labelCell, labelEnd) = match(cells) else { continue }
+            guard let (nutrient, labelCell, labelEnd) = match(cells) else {
+                unlabeled.append(index)
+                continue
+            }
             guard result[nutrient] == nil else { continue }
+            rowOf[nutrient] = index
 
             if nutrient == .calories {
                 let values = valueCells(cells, from: labelCell, labelEnd: labelEnd)
@@ -94,6 +101,25 @@ nonisolated enum LabelParser {
             if let value = firstValue(in: cells, from: labelCell, labelEnd: labelEnd) {
                 result[nutrient] = value
             }
+        }
+
+        // Nome ilegível (p. ex. "Fibra" lida como "-ОГa"): a ordem da declaração europeia é fixa,
+        // por isso uma única fila com valores entre os açúcares e as proteínas só pode ser a fibra,
+        // e uma logo a seguir às proteínas só pode ser o sal.
+        func valueOfSingleRow(after start: Int?, before end: Int?) -> Double? {
+            guard let start, let end else { return nil }
+            let candidates = unlabeled.filter { $0 > start && $0 < end }
+            guard candidates.count == 1 else { return nil }
+            let cells = normalizedRows[candidates[0]]
+            guard let firstCell = cells.first else { return nil }
+            return firstValue(in: cells, from: 0, labelEnd: firstCell.startIndex)
+        }
+        if result[.fiber] == nil, let value = valueOfSingleRow(after: rowOf[.sugars] ?? rowOf[.carbs], before: rowOf[.protein]) {
+            result[.fiber] = value
+        }
+        if result[.salt] == nil, let protein = rowOf[.protein],
+           let value = valueOfSingleRow(after: protein, before: protein + 2) {
+            result[.salt] = value
         }
         return result
     }

@@ -69,6 +69,41 @@ struct PackageReadingTests {
         #expect(close(facts[.salt], 0.13))
     }
 
+    /// Casos reais vistos no Vision: nome da fibra ilegível; filas já endireitadas pelo leitor.
+    @Test func unreadableFibreNameUsesLabelOrder() {
+        let rows: [[String]] = [
+            ["dos quais açúcares", "2,6 g", "6,5 g"],
+            ["-ОГa", "<0,5 g", "<0,5 g"],
+            ["Proteínas", "1,9 g", "4,8 g"],
+            ["Sal", "0,13 g", "0,33 g"],
+        ]
+        let facts = LabelParser.parse(rows: rows)
+        #expect(facts[.fiber] == 0)
+        #expect(facts[.protein] == 1.9)
+    }
+
+    /// Blocos reais da fotografia inclinada do whey (o Vision devolve ângulo 0 mesmo com a imagem torta).
+    @Test func straightensTiltedRowsFromTableGeometry() {
+        func box(_ minX: Double, _ maxX: Double, _ y: Double, _ text: String) -> PackageReader.TextBox {
+            PackageReader.TextBox(text: text, minX: minX, maxX: maxX, midY: y, height: 0.035, angle: 0)
+        }
+        let boxes = [
+            box(0.093, 0.350, 0.209, "Energia / Energy"), box(0.651, 0.773, 0.224, "1620 kJ"), box(0.926, 1.033, 0.232, "486 kJ"),
+            box(0.641, 0.772, 0.279, "383 kcal"), box(0.895, 1.033, 0.289, "115 kcal"), box(1.236, 1.291, 0.299, "6%"),
+            box(0.087, 0.281, 0.316, "Lípidos / Fat"), box(0.691, 0.768, 0.337, "5,6 g"), box(0.951, 1.028, 0.348, "1,7 g"),
+            box(1.232, 1.286, 0.354, "2%"),
+            box(0.078, 0.365, 0.538, "Proteínas / Protein"), box(0.691, 0.760, 0.558, "76 g"), box(0.951, 1.020, 0.568, "23 g"),
+            box(0.077, 0.221, 0.591, "Sal / Salt"), box(0.662, 0.758, 0.615, "0,48 g"), box(0.920, 1.018, 0.623, "0,14 g"),
+        ]
+        let rows = PackageReader.rows(from: boxes)
+        #expect(rows.contains(["Lípidos / Fat", "5,6 g", "1,7 g", "2%"]))
+        #expect(rows.contains(["Sal / Salt", "0,48 g", "0,14 g"]))
+        let facts = LabelParser.parse(rows: rows)
+        #expect(facts[.calories] == 383)
+        #expect(facts[.fat] == 5.6)
+        #expect(facts[.salt] == 0.48)
+    }
+
     @Test func wordBoundariesAvoidFalseMatches() {
         let rows: [[String]] = [["Molho de salsa", "12 g"], ["Universal", "3 g"]]
         #expect(LabelParser.parse(rows: rows).isEmpty)
