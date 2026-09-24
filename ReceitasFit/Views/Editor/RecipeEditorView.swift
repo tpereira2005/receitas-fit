@@ -49,13 +49,11 @@ struct RecipeEditorView: View {
                             .lineLimit(3...8)
                     }
                 }
-                .onAppear {
+                .task {
                     // Usado apenas nas capturas automáticas do CI.
-                    if UserDefaults.standard.bool(forKey: "screenshotEditorIngredients") {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                            proxy.scrollTo("ingredients", anchor: .top)
-                        }
-                    }
+                    guard ScreenshotMode.flag("screenshotEditorIngredients") else { return }
+                    try? await Task.sleep(for: .milliseconds(600))
+                    proxy.scrollTo("ingredients", anchor: .top)
                 }
             }
             .navigationTitle(recipe == nil ? "Nova receita" : "Editar receita")

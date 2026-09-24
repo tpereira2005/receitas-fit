@@ -1,7 +1,8 @@
 import UIKit
 
-enum ImageProcessing {
-    struct Output {
+/// Corre fora da thread principal (Task.detached), por isso não está isolado no MainActor.
+nonisolated enum ImageProcessing {
+    struct Output: Sendable {
         let photo: Data
         let thumbnail: Data
     }
@@ -27,7 +28,7 @@ enum ImageProcessing {
 
 extension UIImage {
     /// Devolve a imagem redimensionada e já com a orientação corrigida.
-    func resized(maxDimension: CGFloat) -> UIImage {
+    nonisolated func resized(maxDimension: CGFloat) -> UIImage {
         let longest = max(size.width, size.height)
         let scale = longest > 0 ? min(1, maxDimension / longest) : 1
         let target = CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())

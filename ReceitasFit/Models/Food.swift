@@ -125,6 +125,20 @@ enum FoodCategory: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+/// Porção com nome definida pelo utilizador para um alimento (por exemplo "1 scoop" = 30 g).
+struct FoodPortion: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var name: String
+    /// Peso (g ou ml, conforme a base do alimento) de uma porção.
+    var grams: Double
+
+    init(id: UUID = UUID(), name: String, grams: Double) {
+        self.id = id
+        self.name = name
+        self.grams = grams
+    }
+}
+
 /// Base dos valores do rótulo: por 100 g ou por 100 ml.
 enum MeasureBase: String, CaseIterable, Identifiable, Codable {
     case grams = "g"
@@ -170,8 +184,8 @@ final class Food {
     var id: UUID = UUID()
     var name: String = ""
     var brand: String = ""
-    var categoryRaw: String = FoodCategory.other.rawValue
-    var measureBaseRaw: String = MeasureBase.grams.rawValue
+    var categoryRaw: String = "other"  // FoodCategory.other
+    var measureBaseRaw: String = "g"  // MeasureBase.grams
     /// Peso (g ou ml) de uma unidade, p. ex. 1 ovo ≈ 60 g. Opcional.
     var unitWeight: Double?
     /// Imagem personalizada (PNG), usada no lugar do ícone da categoria.
@@ -189,6 +203,13 @@ final class Food {
 
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
+
+    // Esquema V2
+    /// Porções com nome (por exemplo "1 scoop = 30 g"), guardadas como JSON.
+    var portionsData: Data = Data()
+    /// Peso de uma colher de sopa / de chá deste alimento, se for diferente de 15 g / 5 g.
+    var tablespoonWeight: Double?
+    var teaspoonWeight: Double?
 
     init(name: String = "", category: FoodCategory = .other) {
         self.id = UUID()
@@ -223,6 +244,11 @@ final class Food {
             fiber = newValue.fiber
             salt = newValue.salt
         }
+    }
+
+    var portions: [FoodPortion] {
+        get { JSONCache.decode([FoodPortion].self, from: portionsData) }
+        set { portionsData = JSONCache.encode(newValue) }
     }
 
     /// "P 23 · H 0 · G 1,5" — resumo curto dos macros por 100 g/ml.

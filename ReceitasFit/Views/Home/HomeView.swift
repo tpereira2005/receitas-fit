@@ -124,11 +124,10 @@ struct HomeView: View {
     }
 
     private func handleScreenshotArguments() {
-        let defaults = UserDefaults.standard
-        if defaults.bool(forKey: "screenshotOpenFirst"), path.isEmpty, let first = filtered.first {
+        if ScreenshotMode.flag("screenshotOpenFirst"), path.isEmpty, let first = filtered.first {
             path.append(RecipeRoute(recipe: first))
         }
-        if defaults.bool(forKey: "screenshotEditFirst"), screenshotEditRecipe == nil, let first = filtered.first {
+        if ScreenshotMode.flag("screenshotEditFirst"), screenshotEditRecipe == nil, let first = filtered.first {
             screenshotEditRecipe = first
         }
     }

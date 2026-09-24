@@ -123,12 +123,23 @@ enum FoodLibrary {
 
 /// Atualizações de dados entre versões da app.
 enum DataMigration {
-    static let currentVersion = 3
+    static let currentVersion = 4
 
     @MainActor
     static func migrate(_ context: ModelContext, from version: Int) {
         if version < 2 { migrateToV2(context) }
         if version < 3 { migrateToV3(context) }
+        if version < 4 { migrateToV4(context) }
+    }
+
+    /// Versão 4: marca como exemplo as receitas criadas pela app (identificadas pelo título).
+    @MainActor
+    static func migrateToV4(_ context: ModelContext) {
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        for recipe in recipes where SampleData.titles.contains(recipe.title) {
+            recipe.isSample = true
+        }
+        try? context.save()
     }
 
     /// Versão 3: cada ingrediente guarda uma cópia dos valores do alimento (os valores não mudam).

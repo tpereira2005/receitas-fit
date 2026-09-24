@@ -20,11 +20,42 @@ env:
   SCHEME: ReceitasFit
   BUNDLE_ID: com.tpereira.receitasfit
   # Versão base; o número da build é acrescentado automaticamente (ex.: 1.1.7).
-  VERSION_BASE: "1.1"
+  VERSION_BASE: "1.2"
 
 jobs:
+  tests:
+    name: Testes
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Selecionar Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Gerar projeto Xcode
+        run: |
+          brew install xcodegen xcbeautify
+          xcodegen generate
+
+      - name: Escolher simulador
+        run: |
+          DEVICES=$(xcrun simctl list devices available -j)
+          UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | test("^iPhone [0-9]+ Pro$"))] | last | .udid // empty')
+          if [ -z "$UDID" ]; then
+            UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | startswith("iPhone"))] | last | .udid')
+          fi
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Correr testes
+        run: |
+          set -o pipefail
+          xcodebuild test             -project ReceitasFit.xcodeproj             -scheme "$SCHEME"             -destination "id=$UDID"             -derivedDataPath build             | xcbeautify --renderer github-actions
+
   ipa:
     name: IPA e fonte do SideStore
+    needs: tests
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5

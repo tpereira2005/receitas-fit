@@ -104,7 +104,7 @@ struct FoodsView: View {
     }
 
     private func handleScreenshotArguments() {
-        if UserDefaults.standard.bool(forKey: "screenshotOpenFood"), path.isEmpty,
+        if ScreenshotMode.flag("screenshotOpenFood"), path.isEmpty,
            let food = foods.first(where: { $0.name == "Peito de frango" }) ?? foods.first {
             path.append(food)
         }

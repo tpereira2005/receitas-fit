@@ -31,6 +31,15 @@ struct FoodDetailView: View {
     }
 
     var body: some View {
+        // Depois de apagar, a vista ainda é desenhada durante a animação de saída.
+        if food.isDeleted || food.modelContext == nil {
+            Color(.systemBackground)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
@@ -149,7 +158,7 @@ struct FoodDetailView: View {
 
     /// Usado apenas nas capturas automáticas do CI: simula a edição do alimento para mostrar a revisão.
     private func handleScreenshotArguments() {
-        guard UserDefaults.standard.bool(forKey: "screenshotFoodReview"), !showingReview, !usedIn.isEmpty else { return }
+        guard ScreenshotMode.flag("screenshotFoodReview"), !showingReview, !usedIn.isEmpty else { return }
         var draft = FoodDraft(food: food)
         let original = draft
         draft.facts.calories += 10
@@ -161,12 +170,8 @@ struct FoodDetailView: View {
     }
 
     private func deleteFood() {
-        let food = food
-        let context = context
+        context.delete(food)
+        try? context.save()
         dismiss()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            context.delete(food)
-            try? context.save()
-        }
     }
 }

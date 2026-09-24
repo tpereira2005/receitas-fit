@@ -4,7 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct RecipeBackup: Codable {
-    var version = 2
+    var version = 3
     var exportedAt = Date()
     var recipes: [RecipeDTO]
     /// Ausente nas cópias da versão 1.
@@ -65,6 +65,10 @@ struct FoodDTO: Codable {
     var createdAt: Date
     /// Ausente em cópias anteriores à versão 1.1.5.
     var imageData: Data?
+    /// Ausentes em cópias anteriores à versão 1.2.
+    var portions: [FoodPortion]?
+    var tablespoonWeight: Double?
+    var teaspoonWeight: Double?
 
     init(food: Food) {
         id = food.id
@@ -76,6 +80,9 @@ struct FoodDTO: Codable {
         per100 = food.per100
         createdAt = food.createdAt
         imageData = food.imageData
+        portions = food.portions
+        tablespoonWeight = food.tablespoonWeight
+        teaspoonWeight = food.teaspoonWeight
     }
 
     func makeFood() -> Food {
@@ -88,6 +95,9 @@ struct FoodDTO: Codable {
         food.per100 = per100
         food.createdAt = createdAt
         food.imageData = imageData
+        food.portions = portions ?? []
+        food.tablespoonWeight = tablespoonWeight
+        food.teaspoonWeight = teaspoonWeight
         return food
     }
 }
@@ -111,6 +121,11 @@ struct RecipeDTO: Codable {
     var saturatedFat: Double?
     var salt: Double?
     var nutritionIsComputed: Bool?
+    // Ausentes em cópias anteriores à versão 1.2.
+    var isSample: Bool?
+    var cookedDates: [Date]?
+    var photoFocusX: Double?
+    var photoFocusY: Double?
     var sourceURL: String
     var notes: String
     var isFavorite: Bool
@@ -138,6 +153,10 @@ struct RecipeDTO: Codable {
         saturatedFat = recipe.saturatedFat
         salt = recipe.salt
         nutritionIsComputed = recipe.nutritionIsComputed
+        isSample = recipe.isSample
+        cookedDates = recipe.cookedDates
+        photoFocusX = recipe.photoFocusX
+        photoFocusY = recipe.photoFocusY
         sourceURL = recipe.sourceURL
         notes = recipe.notes
         isFavorite = recipe.isFavorite
@@ -166,6 +185,10 @@ struct RecipeDTO: Codable {
         recipe.saturatedFat = saturatedFat ?? 0
         recipe.salt = salt ?? 0
         recipe.nutritionIsComputed = nutritionIsComputed ?? false
+        recipe.isSample = isSample ?? false
+        recipe.cookedDates = cookedDates ?? []
+        recipe.photoFocusX = photoFocusX ?? 0.5
+        recipe.photoFocusY = photoFocusY ?? 0.5
         recipe.sourceURL = sourceURL
         recipe.notes = notes
         recipe.isFavorite = isFavorite
@@ -181,7 +204,8 @@ struct RecipeDTO: Codable {
     }
 }
 
-struct BackupDocument: FileDocument {
+/// O SwiftUI pode ler e escrever o documento fora da thread principal.
+nonisolated struct BackupDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
 
     var data: Data

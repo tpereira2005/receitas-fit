@@ -48,7 +48,7 @@ final class Recipe {
     var id: UUID = UUID()
     var title: String = ""
     var summary: String = ""
-    var categoryRaw: String = RecipeCategory.lunch.rawValue
+    var categoryRaw: String = "lunch"  // RecipeCategory.lunch
     var tags: [String] = []
     var servings: Int = 1
     var prepMinutes: Int = 0
@@ -79,6 +79,15 @@ final class Recipe {
     var ingredientsData: Data = Data()
     var stepsData: Data = Data()
 
+    // Esquema V2
+    /// Receita de exemplo criada pela app (pode ser removida em bloco nas Definições).
+    var isSample: Bool = false
+    /// Datas em que o utilizador marcou "Fiz esta receita".
+    var cookedDates: [Date] = []
+    /// Ponto de foco da fotografia (0…1), usado em todos os recortes.
+    var photoFocusX: Double = 0.5
+    var photoFocusY: Double = 0.5
+
     init(title: String = "", category: RecipeCategory = .lunch) {
         self.id = UUID()
         self.title = title
@@ -93,16 +102,19 @@ final class Recipe {
     }
 
     var ingredients: [Ingredient] {
-        get { (try? JSONDecoder().decode([Ingredient].self, from: ingredientsData)) ?? [] }
-        set { ingredientsData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+        get { JSONCache.decode([Ingredient].self, from: ingredientsData) }
+        set { ingredientsData = JSONCache.encode(newValue) }
     }
 
     var steps: [RecipeStep] {
-        get { (try? JSONDecoder().decode([RecipeStep].self, from: stepsData)) ?? [] }
-        set { stepsData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+        get { JSONCache.decode([RecipeStep].self, from: stepsData) }
+        set { stepsData = JSONCache.encode(newValue) }
     }
 
     var totalMinutes: Int { prepMinutes + cookMinutes }
+
+    var timesCooked: Int { cookedDates.count }
+    var lastCookedAt: Date? { cookedDates.max() }
 
     /// Valores por porção guardados na receita.
     var perServing: NutritionFacts {

@@ -3,11 +3,22 @@ import SwiftData
 
 @main
 struct ReceitasFitApp: App {
+    private let container: Result<ModelContainer, Error>
+
+    init() {
+        container = Result { try DataStore.makeContainer() }
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            switch container {
+            case .success(let container):
+                RootView()
+                    .modelContainer(container)
+            case .failure(let error):
+                DataErrorView(error: error)
+            }
         }
-        .modelContainer(for: [Recipe.self, Food.self])
     }
 }
 
@@ -20,9 +31,8 @@ struct RootView: View {
     @AppStorage("didSeedSamples") private var didSeedSamples = false
     @AppStorage("dataVersion") private var dataVersion = 0
 
-    // Os argumentos "-tab" e "-screenshotSearch" são usados apenas para as capturas automáticas no CI.
-    @State private var selectedTab = AppTab(rawValue: UserDefaults.standard.string(forKey: "tab") ?? "") ?? .home
-    @State private var searchText = UserDefaults.standard.string(forKey: "screenshotSearch") ?? ""
+    @State private var selectedTab = AppTab(rawValue: ScreenshotMode.string("tab") ?? "") ?? .home
+    @State private var searchText = ScreenshotMode.string("screenshotSearch") ?? ""
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -58,5 +68,39 @@ struct RootView: View {
             DataMigration.migrate(context, from: dataVersion)
             dataVersion = DataMigration.currentVersion
         }
+    }
+}
+
+/// Mostrado se a base de dados não abrir (por exemplo, uma migração falhada).
+/// Os dados anteriores continuam guardados na cópia de proteção.
+struct DataErrorView: View {
+    let error: Error
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("Não foi possível abrir as receitas", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text("Os teus dados não foram apagados: existe uma cópia de proteção feita antes desta atualização. Instala a versão anterior no SideStore ou contacta o suporte da app.\n\n\(error.localizedDescription)")
+        }
+    }
+}
+
+/// Opções usadas apenas pelas capturas de ecrã automáticas do CI (builds de desenvolvimento).
+/// Na versão instalada pelo SideStore não têm qualquer efeito.
+enum ScreenshotMode {
+    static func flag(_ key: String) -> Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: key)
+        #else
+        false
+        #endif
+    }
+
+    static func string(_ key: String) -> String? {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: key)
+        #else
+        nil
+        #endif
     }
 }

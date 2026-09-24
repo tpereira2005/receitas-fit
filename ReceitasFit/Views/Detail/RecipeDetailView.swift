@@ -31,6 +31,16 @@ struct RecipeDetailView: View {
     private var foodIndex: [UUID: Food] { NutritionCalculator.index(foods) }
 
     var body: some View {
+        // Depois de apagar, a vista ainda é desenhada durante a animação de saída:
+        // não pode ler propriedades de uma receita que já não existe.
+        if recipe.isDeleted || recipe.modelContext == nil {
+            Color(.systemBackground)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
@@ -57,13 +67,11 @@ struct RecipeDetailView: View {
             }
             .scrollEdgeEffectHidden(!showsCompactTitle, for: .top)
             .ignoresSafeArea(edges: .top)
-            .onAppear {
+            .task {
                 // Usado apenas nas capturas automáticas do CI.
-                if UserDefaults.standard.bool(forKey: "screenshotDetailScroll") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        withAnimation { proxy.scrollTo("nutrition", anchor: .top) }
-                    }
-                }
+                guard ScreenshotMode.flag("screenshotDetailScroll") else { return }
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation { proxy.scrollTo("nutrition", anchor: .top) }
             }
         }
         .background(Color(.systemBackground))
@@ -418,14 +426,9 @@ struct RecipeDetailView: View {
     }
 
     private func deleteRecipe() {
-        let recipe = recipe
-        let context = context
+        context.delete(recipe)
+        try? context.save()
         dismiss()
-        // Apaga depois da animação de saída, para a vista não ler um modelo já removido.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            context.delete(recipe)
-            try? context.save()
-        }
     }
 }
 

@@ -35,6 +35,7 @@ enum SampleData {
             recipe.tags = sample.tags
             recipe.isFavorite = sample.favorite
             recipe.notes = sample.notes
+            recipe.isSample = true
             recipe.ingredients = sample.items.map { item in
                 if let food = foodsByName[item.food.searchNormalized] {
                     return Ingredient(food: food, amount: item.amount, unit: item.unit)
@@ -50,6 +51,17 @@ enum SampleData {
         try? context.save()
         return samples.count
     }
+
+    /// Títulos das receitas de exemplo (atuais e de versões anteriores da app).
+    static let titles: Set<String> = Set(samples.map(\.title)).union([
+        "Panquecas proteicas de aveia e banana",
+        "Bowl de frango teriyaki",
+        "Salmão no forno com legumes",
+        "Mousse de chocolate proteica",
+        "Batido verde proteico",
+        "Bolinhas energéticas de tâmara e cacau",
+        "Gelado proteico de banana e amendoim",
+    ])
 
     private static let samples: [Sample] = [
         Sample(
