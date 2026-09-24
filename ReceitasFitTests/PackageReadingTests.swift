@@ -115,6 +115,16 @@ struct PackageReadingTests {
 
     // MARK: - Fotografias reais (Vision no simulador)
 
+    /// Mostra no registo do CI o que o Vision leu (para afinar a leitura).
+    private func log(_ name: String, _ result: PackageReader.PhotoResult) {
+        print("OCR[\(name)] rows:")
+        for row in result.rows { print("OCR[\(name)]   " + row.joined(separator: " | ")) }
+        for box in result.boxes {
+            print(String(format: "OCR[%@] box x=%.3f-%.3f y=%.3f h=%.3f a=%.2f° %@",
+                         name, box.minX, box.maxX, box.midY, box.height, box.angle * 180 / .pi, box.text))
+        }
+    }
+
     private func image(_ name: String) throws -> UIImage {
         let url = try #require(Bundle(for: BundleToken.self).url(forResource: name, withExtension: "jpg"))
         return try #require(UIImage(contentsOfFile: url.path))
@@ -122,6 +132,7 @@ struct PackageReadingTests {
 
     @Test func readsTiltedOatLabel() async throws {
         let result = try await PackageReader.read(image("aveia-proteica"))
+        log("aveia-proteica", result)
         let facts = LabelParser.parse(rows: result.rows)
         let text = result.rows.map { $0.joined(separator: " | ") }.joined(separator: "\n")
         #expect(facts[.calories] == 375, "\(text)")
@@ -136,6 +147,7 @@ struct PackageReadingTests {
 
     @Test func readsMultilingualWheyLabel() async throws {
         let result = try await PackageReader.read(image("whey"))
+        log("whey", result)
         let facts = LabelParser.parse(rows: result.rows)
         let text = result.rows.map { $0.joined(separator: " | ") }.joined(separator: "\n")
         #expect(facts[.calories] == 383, "\(text)")
@@ -149,6 +161,7 @@ struct PackageReadingTests {
 
     @Test func readsDrinkLabelPer100ml() async throws {
         let result = try await PackageReader.read(image("bebida-aveia"))
+        log("bebida-aveia", result)
         let facts = LabelParser.parse(rows: result.rows)
         let text = result.rows.map { $0.joined(separator: " | ") }.joined(separator: "\n")
         #expect(facts.base == .milliliters, "\(text)")

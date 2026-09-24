@@ -19,6 +19,8 @@ enum PackageReader {
     struct PhotoResult {
         var rows: [[String]]
         var barcodes: [String]
+        /// Blocos de texto com posição (para diagnóstico e testes).
+        var boxes: [TextBox] = []
     }
 
     static func read(_ image: UIImage) async throws -> PhotoResult {
@@ -54,7 +56,7 @@ enum PackageReader {
         barcodeRequest.symbologies = [.ean13, .ean8, .upce]
         let barcodes = (try? await barcodeRequest.perform(on: cgImage))?.compactMap(\.payloadString) ?? []
 
-        return PhotoResult(rows: rows(from: boxes), barcodes: barcodes)
+        return PhotoResult(rows: rows(from: boxes), barcodes: barcodes, boxes: boxes)
     }
 
     /// Junta os blocos de texto em filas da tabela, da esquerda para a direita.
