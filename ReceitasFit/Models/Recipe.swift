@@ -194,7 +194,7 @@ extension Recipe {
     }
 }
 
-extension Ingredient {
+nonisolated extension Ingredient {
     /// Quantidade formatada (já com a escala das porções aplicada), p. ex. "150 g".
     func amountText(scale: Double = 1) -> String? {
         guard let amount, amount > 0 else { return nil }
