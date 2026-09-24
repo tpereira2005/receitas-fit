@@ -23,7 +23,7 @@ struct ReceitasFitApp: App {
 }
 
 enum AppTab: String, Hashable {
-    case home, favorites, foods, explore, search
+    case home, recipes, foods, search
 }
 
 struct RootView: View {
@@ -37,17 +37,14 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Receitas", systemImage: "fork.knife", value: AppTab.home) {
+            Tab("Início", systemImage: "house", value: AppTab.home) {
                 HomeView()
             }
-            Tab("Favoritas", systemImage: "heart", value: AppTab.favorites) {
-                FavoritesView()
+            Tab("Receitas", systemImage: "fork.knife", value: AppTab.recipes) {
+                RecipesView()
             }
             Tab("Alimentos", systemImage: "basket", value: AppTab.foods) {
                 FoodsView()
-            }
-            Tab("Explorar", systemImage: "square.grid.2x2", value: AppTab.explore) {
-                ExploreView()
             }
             Tab(value: AppTab.search, role: .search) {
                 SearchView(searchText: $searchText)

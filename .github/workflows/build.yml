@@ -244,7 +244,11 @@ jobs:
           shot 5-alimento -tab foods -screenshotOpenFood YES
           shot 6-editor -screenshotEditFirst YES -screenshotEditorIngredients YES
           shot 7-receita-nutricao -screenshotOpenFirst YES -screenshotDetailScroll YES
-          shot 8-explorar -tab explore
+          shot 8-receitas -tab recipes
+          shot 27-filtros -tab recipes -screenshotFilters YES
+          shot 28-inicio-feitas -screenshotCooked YES
+          shot 29-fiz-receita -screenshotCooked YES -screenshotOpenFirst YES -screenshotDetailCooked YES
+          shot 30-pesquisa-recentes -tab search
           shot 12-rever-receitas -tab foods -screenshotOpenFood YES -screenshotFoodReview YES
           shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready
           shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed

@@ -57,6 +57,9 @@ struct RecipeDetailView: View {
                         .padding(.horizontal)
                     stepsSection
                         .padding(.horizontal)
+                    CookedSection(recipe: recipe)
+                        .padding(.horizontal)
+                        .id("cooked")
                     extrasSection
                         .padding(.horizontal)
                 }
@@ -71,9 +74,10 @@ struct RecipeDetailView: View {
             .ignoresSafeArea(edges: .top)
             .task {
                 // Usado apenas nas capturas automáticas do CI.
-                guard ScreenshotMode.flag("screenshotDetailScroll") else { return }
+                let showsCooked = ScreenshotMode.flag("screenshotDetailCooked")
+                guard ScreenshotMode.flag("screenshotDetailScroll") || showsCooked else { return }
                 try? await Task.sleep(for: .seconds(1.2))
-                withAnimation { proxy.scrollTo("nutrition", anchor: .top) }
+                withAnimation { proxy.scrollTo(showsCooked ? "cooked" : "nutrition", anchor: showsCooked ? .center : .top) }
             }
         }
         .background(Color(.systemBackground))
@@ -176,6 +180,9 @@ struct RecipeDetailView: View {
                         InfoPill(symbol: "frying.pan", text: "Confeção \(Format.minutes(recipe.cookMinutes))")
                     }
                     InfoPill(symbol: "person.2", text: Format.servings(recipe.servings))
+                    if recipe.timesCooked > 0 {
+                        InfoPill(symbol: "checkmark.circle", text: recipe.timesCooked == 1 ? "Feita 1 vez" : "Feita \(recipe.timesCooked) vezes")
+                    }
                     ForEach(recipe.tags, id: \.self) { tag in
                         InfoPill(symbol: "tag", text: tag)
                     }

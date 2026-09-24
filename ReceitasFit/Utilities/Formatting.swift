@@ -8,6 +8,22 @@ nonisolated enum Format {
         return rest == 0 ? "\(hours) h" : "\(hours) h \(rest) min"
     }
 
+    /// "hoje", "ontem", "há 3 dias", "há 2 semanas" ou a data ("12 set.").
+    nonisolated static func relativeDay(_ date: Date, now: Date = .now) -> String {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date), to: calendar.startOfDay(for: now)).day ?? 0
+        switch days {
+        case ..<1: return "hoje"
+        case 1: return "ontem"
+        case 2..<7: return "há \(days) dias"
+        case 7..<14: return "há 1 semana"
+        case 14..<35: return "há \(days / 7) semanas"
+        default:
+            let sameYear = calendar.isDate(date, equalTo: now, toGranularity: .year)
+            return date.formatted(sameYear ? .dateTime.day().month(.abbreviated) : .dateTime.day().month(.abbreviated).year())
+        }
+    }
+
     static func servings(_ count: Int) -> String {
         count == 1 ? "1 porção" : "\(count) porções"
     }
@@ -27,6 +43,11 @@ extension Double {
 }
 
 extension String {
+    /// Primeira letra em maiúscula ("quarta-feira, 24…" → "Quarta-feira, 24…").
+    nonisolated var capitalizedFirst: String {
+        prefix(1).uppercased() + dropFirst()
+    }
+
     nonisolated var trimmed: String {
         trimmingCharacters(in: .whitespacesAndNewlines)
     }

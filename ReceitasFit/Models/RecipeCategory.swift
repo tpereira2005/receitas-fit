@@ -133,7 +133,7 @@ enum RecipeFilter: Hashable {
 }
 
 enum RecipeSort: String, CaseIterable, Identifiable {
-    case newest, oldest, name, calories, protein, time
+    case newest, oldest, name, calories, protein, time, recentlyCooked
 
     var id: String { rawValue }
 
@@ -145,6 +145,7 @@ enum RecipeSort: String, CaseIterable, Identifiable {
         case .calories: "Menos calorias"
         case .protein: "Mais proteína"
         case .time: "Mais rápidas"
+        case .recentlyCooked: "Feitas recentemente"
         }
     }
 
@@ -156,6 +157,7 @@ enum RecipeSort: String, CaseIterable, Identifiable {
         case .calories: "flame"
         case .protein: "bolt"
         case .time: "timer"
+        case .recentlyCooked: "frying.pan"
         }
     }
 
@@ -167,6 +169,16 @@ enum RecipeSort: String, CaseIterable, Identifiable {
         case .calories: recipes.sorted { $0.calories < $1.calories }
         case .protein: recipes.sorted { $0.protein > $1.protein }
         case .time: recipes.sorted { $0.totalMinutes < $1.totalMinutes }
+        case .recentlyCooked:
+            // As feitas mais recentemente primeiro; as nunca feitas no fim, das mais novas para as mais antigas.
+            recipes.sorted { a, b in
+                switch (a.lastCookedAt, b.lastCookedAt) {
+                case let (x?, y?): x > y
+                case (.some, nil): true
+                case (nil, .some): false
+                case (nil, nil): a.createdAt > b.createdAt
+                }
+            }
         }
     }
 }

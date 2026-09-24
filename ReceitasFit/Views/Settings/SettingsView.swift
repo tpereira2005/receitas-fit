@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var confirmDisableAuto = false
     private let autoBackup = AutoBackup.shared
     @State private var message: String?
+    @State private var confirmRemoveSamples = false
 
     private var appVersion: String {
         let info = Bundle.main.infoDictionary
@@ -59,10 +60,43 @@ struct SettingsView: View {
                     .id("gemini")
 
                 Section {
-                    Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
-                        let count = SampleData.insert(into: context)
-                        message = "Foram adicionadas \(count) receitas de exemplo."
+                    NavigationLink {
+                        TagManagerView()
+                    } label: {
+                        LabeledContent {
+                            Text("\(TagLibrary.counts(in: recipes).count)")
+                        } label: {
+                            Label("Etiquetas", systemImage: "tag")
+                        }
                     }
+                } header: {
+                    Text("Organização")
+                } footer: {
+                    Text("Muda o nome, junta ou apaga etiquetas em todas as receitas.")
+                }
+
+                Section {
+                    let samples = recipes.filter(\.isSample)
+                    if samples.isEmpty {
+                        Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
+                            let count = SampleData.insert(into: context)
+                            message = "Foram adicionadas \(count) receitas de exemplo."
+                        }
+                    } else {
+                        Button(role: .destructive) {
+                            confirmRemoveSamples = true
+                        } label: {
+                            Label("Remover receitas de exemplo (\(samples.count))", systemImage: "trash")
+                                .foregroundStyle(.red)
+                        }
+                    }
+                } header: {
+                    Text("Receitas de exemplo")
+                } footer: {
+                    Text("As receitas de exemplo que editaste passaram a ser tuas e não são removidas.")
+                }
+
+                Section {
                     Button("Repor alimentos de origem", systemImage: "basket") {
                         let before = foods.count
                         FoodLibrary.insertMissingDefaults(in: context)
@@ -115,6 +149,11 @@ struct SettingsView: View {
             } message: {
                 Text("As cópias que já estão na pasta não são apagadas.")
             }
+            .confirmationDialog("Remover as receitas de exemplo?", isPresented: $confirmRemoveSamples, titleVisibility: .visible) {
+                Button("Remover", role: .destructive, action: removeSamples)
+            } message: {
+                Text("São apagadas as receitas de exemplo que nunca editaste. As tuas receitas e os alimentos ficam como estão.")
+            }
             .alert(
                 "Receitas",
                 isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })
@@ -127,6 +166,14 @@ struct SettingsView: View {
     }
 
     // MARK: - Cópias automáticas
+
+    private func removeSamples() {
+        let samples = recipes.filter(\.isSample)
+        for recipe in samples { context.delete(recipe) }
+        try? context.save()
+        Haptics.warning()
+        message = samples.count == 1 ? "Foi removida 1 receita de exemplo." : "Foram removidas \(samples.count) receitas de exemplo."
+    }
 
     private func handleFolder(_ result: Result<URL, Error>) {
         switch result {

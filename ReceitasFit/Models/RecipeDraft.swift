@@ -73,6 +73,8 @@ struct RecipeDraft: Equatable {
         recipe.photoFocusX = min(1, max(0, photoFocusX))
         recipe.photoFocusY = min(1, max(0, photoFocusY))
         NutritionCalculator.update(recipe, foods: foods)
+        // Uma receita de exemplo editada passa a ser do utilizador (não é apagada com os exemplos).
+        recipe.isSample = false
         recipe.updatedAt = .now
     }
 }

@@ -1,29 +1,35 @@
 import SwiftUI
 import SwiftData
 
+/// Pesquisa de receitas e alimentos, com filtros rápidos e pesquisas recentes.
+/// Os resultados vêm por relevância: primeiro o que tem a palavra no título.
 struct SearchView: View {
     @Binding var searchText: String
 
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
+    @Query(sort: \Food.name) private var foods: [Food]
     @State private var filters: Set<QuickFilter> = []
+    @State private var recent = RecentSearches.all
     @Namespace private var namespace
 
-    private var isIdle: Bool { searchText.trimmed.isEmpty && filters.isEmpty }
+    private var query: String { searchText.trimmed }
+    private var isIdle: Bool { query.isEmpty && filters.isEmpty }
 
-    private var results: [Recipe] {
-        recipes.filter { recipe in
-            recipe.matches(query: searchText) && filters.allSatisfy { $0.matches(recipe) }
-        }
+    private var recipeResults: [Recipe] {
+        recipes
+            .filter { recipe in filters.allSatisfy { $0.matches(recipe) } }
+            .compactMap { recipe in recipe.searchScore(query).map { (recipe, $0) } }
+            .sorted { $0.1 == $1.1 ? $0.0.title.localizedStandardCompare($1.0.title) == .orderedAscending : $0.1 > $1.1 }
+            .map(\.0)
+    }
+
+    private var foodResults: [Food] {
+        guard !query.isEmpty, filters.isEmpty else { return [] }
+        return foods.filter { $0.matches(query: query) }
     }
 
     private var popularTags: [String] {
-        var counts: [String: Int] = [:]
-        for recipe in recipes {
-            for tag in recipe.tags { counts[tag, default: 0] += 1 }
-        }
-        return counts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
-            .prefix(12)
-            .map(\.key)
+        TagLibrary.counts(in: recipes).prefix(12).map(\.tag)
     }
 
     var body: some View {
@@ -34,24 +40,68 @@ struct SearchView: View {
 
                     if isIdle {
                         idleContent
-                    } else if results.isEmpty {
+                    } else if recipeResults.isEmpty && foodResults.isEmpty {
                         ContentUnavailableView.search(text: searchText)
                             .padding(.top, 40)
                     } else {
-                        VStack(alignment: .leading, spacing: 14) {
-                            SectionHeader(title: "Resultados", trailing: Format.recipes(results.count))
-                            RecipeGrid(recipes: results, namespace: namespace, source: "search")
-                        }
+                        results
                     }
                 }
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Pesquisar")
-            .searchable(text: $searchText, prompt: "Receitas, ingredientes, etiquetas…")
+            .searchable(text: $searchText, prompt: "Receitas, alimentos, etiquetas…")
+            .onSubmit(of: .search) { remember(query) }
+            .navigationDestination(for: Food.self) { food in
+                FoodDetailView(food: food, namespace: namespace)
+            }
             .recipeDestinations(namespace)
         }
     }
+
+    // MARK: - Resultados
+
+    @ViewBuilder
+    private var results: some View {
+        if !recipeResults.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeader(title: "Receitas", trailing: Format.recipes(recipeResults.count))
+                RecipeGrid(recipes: recipeResults, namespace: namespace, source: "search")
+            }
+            .simultaneousGesture(TapGesture().onEnded { remember(query) })
+        }
+
+        if !foodResults.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(title: "Alimentos", trailing: foodResults.count == 1 ? "1 alimento" : "\(foodResults.count) alimentos")
+                VStack(spacing: 0) {
+                    ForEach(foodResults) { food in
+                        NavigationLink(value: food) {
+                            FoodRow(food: food)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                        .simultaneousGesture(TapGesture().onEnded { remember(query) })
+                        if food.id != foodResults.last?.id {
+                            Divider().padding(.leading, 44)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func remember(_ text: String) {
+        guard !text.isEmpty else { return }
+        RecentSearches.add(text)
+        recent = RecentSearches.all
+    }
+
+    // MARK: - Filtros rápidos
 
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -80,8 +130,59 @@ struct SearchView: View {
         .scrollClipDisabled()
     }
 
+    // MARK: - Sem pesquisa
+
     @ViewBuilder
     private var idleContent: some View {
+        if !recent.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Recentes").font(.title3.bold())
+                    Spacer()
+                    Button("Limpar") {
+                        withAnimation {
+                            RecentSearches.clear()
+                            recent = []
+                        }
+                    }
+                    .font(.subheadline)
+                }
+                .padding(.horizontal)
+
+                VStack(spacing: 0) {
+                    ForEach(recent, id: \.self) { item in
+                        HStack(spacing: 12) {
+                            Button {
+                                searchText = item
+                            } label: {
+                                Label(item, systemImage: "clock.arrow.circlepath")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            Button {
+                                withAnimation {
+                                    RecentSearches.remove(item)
+                                    recent = RecentSearches.all
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Remover “\(item)”")
+                        }
+                        .padding(.vertical, 11)
+                        if item != recent.last {
+                            Divider().padding(.leading, 34)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+
         if !popularTags.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 SectionHeader(title: "Etiquetas populares")

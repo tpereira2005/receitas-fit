@@ -1,31 +1,61 @@
 import SwiftUI
 import SwiftData
 
+/// Separador Início: um resumo para chegar depressa ao que interessa.
+/// Recentes, feitas recentemente, favoritas, categorias, coleções e etiquetas.
 struct HomeView: View {
     @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
-    @AppStorage("homeSort") private var sort: RecipeSort = .newest
-    @State private var selectedCategory: RecipeCategory?
+    @Environment(\.modelContext) private var context
     @State private var path = NavigationPath()
     @State private var showingNewRecipe = false
     @State private var screenshotEditRecipe: Recipe?
     @State private var showingSettings = false
     @Namespace private var namespace
 
-    private var filtered: [Recipe] {
-        sort.sorted(recipes.filter { selectedCategory == nil || $0.category == selectedCategory })
+    private let tileColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+
+    private var recentlyCooked: [Recipe] {
+        recipes
+            .filter { $0.lastCookedAt != nil }
+            .sorted { ($0.lastCookedAt ?? .distantPast) > ($1.lastCookedAt ?? .distantPast) }
+            .prefix(10)
+            .map { $0 }
     }
+
+    private var favorites: [Recipe] {
+        recipes.filter(\.isFavorite).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    private var tags: [(tag: String, count: Int)] { TagLibrary.counts(in: recipes) }
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
                 if recipes.isEmpty {
-                    emptyState
+                    ContentUnavailableView {
+                        Label("Ainda sem receitas", systemImage: "fork.knife")
+                    } description: {
+                        Text("Guarda aqui as receitas que crias ou encontras nas redes sociais.")
+                    } actions: {
+                        Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
+                            .buttonStyle(.glassProminent)
+                    }
                 } else {
                     content
                 }
             }
-            .navigationTitle("Receitas")
-            .toolbar { toolbarContent }
+            .navigationTitle("Início")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Definições", systemImage: "gearshape") { showingSettings = true }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
+                }
+            }
+            .navigationDestination(for: RecipeFilter.self) { filter in
+                FilteredRecipesView(filter: filter, namespace: namespace)
+            }
             .recipeDestinations(namespace)
             .sheet(isPresented: $showingNewRecipe) {
                 RecipeEditorView()
@@ -42,48 +72,66 @@ struct HomeView: View {
 
     private var content: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                if selectedCategory == nil && recipes.count >= 4 {
-                    VStack(alignment: .leading, spacing: 12) {
-                        SectionHeader(title: "Recentes")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 14) {
-                                ForEach(recipes.prefix(6)) { recipe in
-                                    let route = RecipeRoute(recipe: recipe, source: "featured")
-                                    NavigationLink(value: route) {
-                                        FeaturedRecipeCard(recipe: recipe, transitionID: route.transitionID, namespace: namespace)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .scrollTargetLayout()
-                        }
-                        .contentMargins(.horizontal, 16, for: .scrollContent)
-                        .scrollTargetBehavior(.viewAligned)
-                        .scrollClipDisabled()
-                    }
+            VStack(alignment: .leading, spacing: 30) {
+                recentSection
+
+                if !recentlyCooked.isEmpty {
+                    carousel(title: "Feitas recentemente", recipes: recentlyCooked, source: "cooked", showsCookedDate: true)
                 }
 
-                CategoryChips(selection: $selectedCategory)
+                if !favorites.isEmpty {
+                    carousel(title: "Favoritas", recipes: favorites, source: "favorites", seeAll: .quick(.favorites))
+                }
 
-                VStack(alignment: .leading, spacing: 14) {
-                    SectionHeader(title: selectedCategory?.title ?? "Todas as receitas", trailing: Format.recipes(filtered.count))
-                    if filtered.isEmpty {
-                        ContentUnavailableView {
-                            Label {
-                                Text("Nada por aqui")
-                            } icon: {
-                                (selectedCategory?.glyph ?? Image(systemName: "fork.knife"))
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Categorias")
+                    LazyVGrid(columns: tileColumns, spacing: 14) {
+                        ForEach(RecipeCategory.allCases) { category in
+                            NavigationLink(value: RecipeFilter.category(category)) {
+                                CategoryTile(category: category, count: recipes.filter { $0.category == category }.count)
                             }
-                        } description: {
-                            Text("Ainda não tens receitas nesta categoria.")
+                            .buttonStyle(.plain)
                         }
-                        .padding(.top, 20)
-                    } else {
-                        RecipeGrid(recipes: filtered, namespace: namespace)
+                    }
+                    .padding(.horizontal)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Coleções inteligentes")
+                    VStack(spacing: 0) {
+                        ForEach(QuickFilter.allCases) { filter in
+                            NavigationLink(value: RecipeFilter.quick(filter)) {
+                                SmartCollectionRow(filter: filter, count: recipes.filter { filter.matches($0) }.count)
+                            }
+                            .buttonStyle(.plain)
+                            if filter != QuickFilter.allCases.last {
+                                Divider().padding(.leading, 62)
+                            }
+                        }
+                    }
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .padding(.horizontal)
+                }
+
+                if !tags.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionHeader(title: "Etiquetas")
+                        FlowLayout(spacing: 8) {
+                            ForEach(tags, id: \.tag) { item in
+                                NavigationLink(value: RecipeFilter.tag(item.tag)) {
+                                    HStack(spacing: 6) {
+                                        Text(item.tag)
+                                        Text("\(item.count)").foregroundStyle(.secondary)
+                                    }
+                                    .font(.subheadline.weight(.medium))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .glassEffect(.regular.interactive(), in: .capsule)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
             }
@@ -91,48 +139,116 @@ struct HomeView: View {
         }
     }
 
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("Ainda sem receitas", systemImage: "fork.knife")
-        } description: {
-            Text("Guarda aqui as receitas que crias ou encontras nas redes sociais.")
-        } actions: {
-            Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
-                .buttonStyle(.glassProminent)
+    /// As receitas acrescentadas mais recentemente, em cartões grandes.
+    private var recentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Recentes")
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 14) {
+                    ForEach(recipes.prefix(6)) { recipe in
+                        let route = RecipeRoute(recipe: recipe, source: "featured")
+                        NavigationLink(value: route) {
+                            FeaturedRecipeCard(recipe: recipe, transitionID: route.transitionID, namespace: namespace)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .contentMargins(.horizontal, 16, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollClipDisabled()
         }
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button("Definições", systemImage: "gearshape") { showingSettings = true }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Picker("Ordenar por", selection: $sort) {
-                    ForEach(RecipeSort.allCases) { option in
-                        Label(option.title, systemImage: option.symbol).tag(option)
+    /// Fila horizontal de cartões pequenos, com "Ver todas" opcional.
+    private func carousel(title: String, recipes: [Recipe], source: String,
+                          seeAll: RecipeFilter? = nil, showsCookedDate: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.title3.bold())
+                Spacer()
+                if let seeAll {
+                    NavigationLink(value: seeAll) {
+                        Text("Ver todas").font(.subheadline.weight(.semibold))
                     }
                 }
-            } label: {
-                Label("Ordenar", systemImage: "arrow.up.arrow.down")
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("Nova receita", systemImage: "plus") { showingNewRecipe = true }
+            .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(recipes) { recipe in
+                        let route = RecipeRoute(recipe: recipe, source: source)
+                        NavigationLink(value: route) {
+                            CompactRecipeCard(
+                                recipe: recipe,
+                                caption: showsCookedDate ? recipe.lastCookedAt.map { Format.relativeDay($0) } : nil,
+                                transitionID: route.transitionID,
+                                namespace: namespace
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .contentMargins(.horizontal, 16, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollClipDisabled()
         }
     }
 
     private func handleScreenshotArguments() {
-        if ScreenshotMode.flag("screenshotOpenFirst"), path.isEmpty, let first = filtered.first {
+        // Capturas do CI: algumas receitas já feitas, para mostrar "Feitas recentemente".
+        if ScreenshotMode.flag("screenshotCooked"), !recipes.contains(where: { $0.timesCooked > 0 }) {
+            for (offset, recipe) in recipes.prefix(3).enumerated() {
+                recipe.cookedDates = [Date.now.addingTimeInterval(Double(-(offset * 2 + 1)) * 86_400), .now.addingTimeInterval(-9 * 86_400)]
+            }
+            try? context.save()
+        }
+        if ScreenshotMode.flag("screenshotOpenFirst"), path.isEmpty, let first = recipes.first {
             path.append(RecipeRoute(recipe: first))
         }
-        if ScreenshotMode.flag("screenshotEditFirst"), screenshotEditRecipe == nil, let first = filtered.first {
+        if ScreenshotMode.flag("screenshotEditFirst"), screenshotEditRecipe == nil, let first = recipes.first {
             screenshotEditRecipe = first
         }
         if ScreenshotMode.flag("screenshotSettings") {
             showingSettings = true
         }
+    }
+}
+
+/// Cartão pequeno das filas do Início: fotografia quadrada e título (e, opcionalmente, quando foi feita).
+struct CompactRecipeCard: View {
+    let recipe: Recipe
+    var caption: String?
+    let transitionID: String
+    let namespace: Namespace.ID
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Color.clear
+                .frame(width: 132, height: 132)
+                .overlay { RecipePhoto(recipe: recipe, symbolSize: 30) }
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .matchedTransitionSource(id: transitionID, in: namespace)
+            Text(recipe.title)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            if let caption {
+                Label(caption, systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if recipe.calories > 0 {
+                Text("\(Int(recipe.calories.rounded())) kcal")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 132, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 

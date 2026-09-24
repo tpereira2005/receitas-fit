@@ -22,6 +22,16 @@ struct RecipeCard: View {
                             .padding(8)
                     }
                 }
+                .overlay(alignment: .topLeading) {
+                    if recipe.isSample {
+                        Text("Exemplo")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .glassEffect(.regular, in: .capsule)
+                            .padding(8)
+                    }
+                }
                 .overlay(alignment: .topTrailing) {
                     if recipe.isFavorite {
                         Image(systemName: "heart.fill")
