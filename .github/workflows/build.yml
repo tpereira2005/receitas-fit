@@ -239,7 +239,7 @@ jobs:
 
           shot 1-inicio
           shot 2-receita -screenshotOpenFirst YES
-          shot 3-pesquisa -tab search -screenshotSearch frango
+          shot 3-pesquisa -tab search -screenshotSearch gelado
           shot 4-alimentos -tab foods
           shot 5-alimento -tab foods -screenshotOpenFood YES
           shot 6-editor -screenshotEditFirst YES -screenshotEditorIngredients YES

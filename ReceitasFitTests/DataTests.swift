@@ -112,4 +112,55 @@ struct DataTests {
         #expect(old.isSample)
         #expect(!mine.isSample)
     }
+
+    /// Instalação nova: todas as receitas base, com todos os ingredientes ligados a alimentos.
+    @Test func baseRecipesAreLinkedAndComputed() throws {
+        let context = ModelContext(try memoryContainer())
+        FoodLibrary.insertMissingDefaults(in: context)
+        let created = SampleData.insertBase(into: context)
+        let recipes = try context.fetch(FetchDescriptor<Recipe>())
+        #expect(created == SampleData.baseTitles.count)
+        #expect(recipes.count == created)
+        for recipe in recipes {
+            #expect(!recipe.isSample)
+            #expect(recipe.nutritionIsComputed)
+            #expect(recipe.calories > 0, "\(recipe.title)")
+            let unlinked = recipe.ingredients.filter { $0.foodID == nil }.map(\.name)
+            #expect(unlinked.isEmpty, "\(recipe.title): \(unlinked)")
+        }
+
+        // Biscoff: 375 ml de leite proteico + 225 ml de leite magro + 3 bolachas, a dividir por 2 doses.
+        let biscoff = try #require(recipes.first { $0.title == "Gelado Biscoff" })
+        #expect(abs(biscoff.protein - 23.2) < 0.1)
+        #expect(biscoff.ingredients.last?.displayText() == "3 bolachas Lotus Biscoff")
+
+        // Correr outra vez não duplica nada.
+        #expect(SampleData.insertBase(into: context) == 0)
+    }
+
+    /// Atualização (versão 5): entram só os gelados que faltam e só os alimentos de que precisam.
+    @Test func migrationV5AddsOnlyMissingRecipesAndFoods() throws {
+        let context = ModelContext(try memoryContainer())
+        let milk = Food(name: "Leite magro", category: .dairy)
+        milk.measureBase = .milliliters
+        milk.per100 = NutritionFacts(calories: 34, protein: 3.4, carbs: 4.9)
+        context.insert(milk)
+        context.insert(Recipe(title: "Cookie Dough Cake", category: .snack))
+        try context.save()
+
+        DataMigration.migrateToV5(context)
+
+        let titles = try context.fetch(FetchDescriptor<Recipe>()).map(\.title)
+        #expect(titles.filter { $0 == "Cookie Dough Cake" }.count == 1)
+        #expect(titles.contains("Gelado Oreo"))
+        let foods = try context.fetch(FetchDescriptor<Food>())
+        let names = Set(foods.map(\.name))
+        #expect(foods.filter { $0.name == "Leite magro" }.count == 1)
+        #expect(names.contains("Goma xantana"))
+        #expect(names.contains("Leite Proteína"))
+        // Alimentos de origem que nenhum gelado usa não voltam a aparecer.
+        #expect(!names.contains("Peito de frango"))
+        // O Cookie Dough Cake já existia: os alimentos só dele não são acrescentados.
+        #expect(!names.contains("Select Protein Powder Gourmet Vanilla"))
+    }
 }
