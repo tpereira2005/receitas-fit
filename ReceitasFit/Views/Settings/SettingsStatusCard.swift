@@ -57,6 +57,8 @@ struct SettingsRow: View {
         HStack(spacing: 14) {
             SettingsIcon(symbol: symbol, color: color)
             Text(title)
+                .lineLimit(1)
+                .layoutPriority(1)
             Spacer(minLength: 8)
             if let value {
                 Text(value)

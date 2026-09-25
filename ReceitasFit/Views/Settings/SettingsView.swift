@@ -44,7 +44,7 @@ struct SettingsView: View {
                     }
                     NavigationLink(value: SettingsPage.packageReading) {
                         SettingsRow(title: "Leitura de embalagens", symbol: "sparkles", color: .purple,
-                                    value: geminiActive ? "Gemini" : "No iPhone")
+                                    value: geminiActive ? "Gemini" : "Básica")
                     }
                 }
 
@@ -65,8 +65,9 @@ struct SettingsView: View {
                         showingWhatsNew = true
                     } label: {
                         SettingsRow(title: "O que há de novo", symbol: "gift.fill", color: .pink)
-                            .foregroundStyle(.primary)
                     }
+                    // Sem isto, o título ficava com a cor de destaque, como um botão.
+                    .tint(.primary)
                 }
             }
             .navigationTitle("Definições")
@@ -141,9 +142,11 @@ struct SettingsView: View {
         HStack(spacing: 14) {
             SettingsIcon(symbol: "exclamationmark.triangle.fill", color: .orange, size: 40)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Renova a app no SideStore")
+                Text("Renova no SideStore")
                     .font(.headline)
-                Text("A assinatura expira \(AppSigning.expiryText).")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Text("A app expira \(AppSigning.expiryText).")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

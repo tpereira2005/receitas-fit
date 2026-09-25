@@ -29,10 +29,15 @@ struct TagManagerView: View {
                         LabeledContent {
                             Text(item.count == 0 ? "Sem receitas" : Format.recipes(item.count))
                         } label: {
-                            Label(item.tag, systemImage: "tag")
-                                .foregroundStyle(.primary)
+                            Label {
+                                Text(item.tag)
+                            } icon: {
+                                Image(systemName: "tag.fill")
+                                    .foregroundStyle(.orange)
+                            }
                         }
                     }
+                    .tint(.primary)
                     .swipeActions {
                         Button("Apagar", systemImage: "trash", role: .destructive) { deleting = item.tag }
                         Button("Mudar nome", systemImage: "pencil") {
