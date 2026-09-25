@@ -184,7 +184,9 @@ extension Recipe {
     /// Linha curta mostrada por baixo do título nos cartões.
     var cardFacts: String {
         var parts: [String] = []
-        if protein > 0 { parts.append("\(protein.cleanString) g proteína") }
+        // "prot." quando há espera: "23,2 g proteína · 10 min + 24 h" não cabia no cartão.
+        let proteinText = waitMinutes > 0 ? "g prot." : "g proteína"
+        if protein > 0 { parts.append("\(protein.cleanString) \(proteinText)") }
         if let timeText { parts.append(timeText) }
         return parts.isEmpty ? category.title : parts.joined(separator: " · ")
     }
