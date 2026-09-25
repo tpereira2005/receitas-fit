@@ -8,6 +8,12 @@ nonisolated enum Format {
         return rest == 0 ? "\(hours) h" : "\(hours) h \(rest) min"
     }
 
+    /// "Faltam 3 h", "Falta 1 h", "Faltam 45 min".
+    static func remaining(_ minutes: Int) -> String {
+        let text = self.minutes(minutes)
+        return text.hasPrefix("1 ") ? "Falta \(text)" : "Faltam \(text)"
+    }
+
     /// "hoje", "ontem", "há 3 dias", "há 2 semanas" ou a data ("12 set.").
     nonisolated static func relativeDay(_ date: Date, now: Date = .now) -> String {
         let calendar = Calendar.current

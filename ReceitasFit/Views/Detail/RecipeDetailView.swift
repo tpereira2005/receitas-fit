@@ -16,6 +16,7 @@ struct RecipeDetailView: View {
     @State private var showingShare = ScreenshotMode.flag("screenshotShare")
     @State private var confirmDelete = false
     @State private var showsCompactTitle = false
+    @State private var cooking = ScreenshotMode.flag("screenshotCooking")
 
     /// Altura da fotografia.
     private let heroHeight: CGFloat = 440
@@ -27,7 +28,13 @@ struct RecipeDetailView: View {
     init(recipe: Recipe) {
         self.recipe = recipe
         _servings = State(initialValue: max(1, recipe.servings))
+        // Marcações de uma preparação a meio (guardadas durante 12 horas).
+        let progress = CookingProgress.load(for: recipe.id)
+        _checkedIngredients = State(initialValue: progress.ingredients)
+        _completedSteps = State(initialValue: progress.steps)
     }
+
+    private var isCooking: Bool { !checkedIngredients.isEmpty || !completedSteps.isEmpty }
 
     private var scale: Double { Double(servings) / Double(max(1, recipe.servings)) }
     private var foodIndex: [UUID: Food] { NutritionCalculator.index(foods) }
@@ -55,8 +62,12 @@ struct RecipeDetailView: View {
                         .id("nutrition")
                     ingredientsSection
                         .padding(.horizontal)
+                        .id("ingredients")
                     stepsSection
                         .padding(.horizontal)
+                    WaitSection(recipe: recipe)
+                        .padding(.horizontal)
+                        .id("wait")
                     CookedSection(recipe: recipe)
                         .padding(.horizontal)
                         .id("cooked")
@@ -75,9 +86,18 @@ struct RecipeDetailView: View {
             .task {
                 // Usado apenas nas capturas automáticas do CI.
                 let showsCooked = ScreenshotMode.flag("screenshotDetailCooked")
-                guard ScreenshotMode.flag("screenshotDetailScroll") || showsCooked else { return }
+                let showsWait = ScreenshotMode.flag("screenshotDetailWait")
+                guard ScreenshotMode.flag("screenshotDetailScroll") || showsCooked || showsWait else { return }
                 try? await Task.sleep(for: .seconds(1.2))
-                withAnimation { proxy.scrollTo(showsCooked ? "cooked" : "nutrition", anchor: showsCooked ? .center : .top) }
+                withAnimation {
+                    if showsWait {
+                        proxy.scrollTo("wait", anchor: .center)
+                    } else if ScreenshotMode.flag("screenshotDetailIngredients") {
+                        proxy.scrollTo("ingredients", anchor: .top)
+                    } else {
+                        proxy.scrollTo(showsCooked ? "cooked" : "nutrition", anchor: showsCooked ? .center : .top)
+                    }
+                }
             }
         }
         .background(Color(.systemBackground))
@@ -101,12 +121,35 @@ struct RecipeDetailView: View {
         .onChange(of: recipe.servings) { _, newValue in
             servings = max(1, newValue)
         }
+        .fullScreenCover(isPresented: $cooking) {
+            CookingModeView(recipe: recipe, scale: scale, completedSteps: $completedSteps,
+                            startAt: ScreenshotMode.string("screenshotCookingStep").flatMap(Int.init))
+        }
+        // Guarda o que está marcado e mantém o ecrã aceso enquanto estás a cozinhar.
+        .onChange(of: checkedIngredients) { saveProgress() }
+        .onChange(of: completedSteps) { saveProgress() }
+        .onAppear { ScreenAwake.set("recipe", isCooking) }
+        .onDisappear { ScreenAwake.set("recipe", false) }
+        // "Fiz esta receita": a preparação acabou, as marcações limpam-se.
+        .onChange(of: recipe.timesCooked) { old, new in
+            guard new > old else { return }
+            withAnimation(.snappy) {
+                checkedIngredients = []
+                completedSteps = []
+            }
+            CookingProgress.clear(for: recipe.id)
+        }
         .sensoryFeedback(.selection, trigger: servings)
         .sensoryFeedback(.impact(weight: .light), trigger: checkedIngredients)
         .sensoryFeedback(.impact(weight: .light), trigger: completedSteps)
         .sensoryFeedback(trigger: recipe.isFavorite) { _, isFavorite in
             isFavorite ? .success : .impact(weight: .light)
         }
+    }
+
+    private func saveProgress() {
+        CookingProgress.save(CookingProgress(ingredients: checkedIngredients, steps: completedSteps), for: recipe.id)
+        ScreenAwake.set("recipe", isCooking)
     }
 
     // MARK: - Fotografia
@@ -222,7 +265,14 @@ struct RecipeDetailView: View {
         let ingredients = recipe.ingredients
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Ingredientes").font(.title2.bold())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ingredientes").font(.title2.bold())
+                    if let weight = recipe.weightPerServing {
+                        Text("≈ \(Int(weight.rounded())) g por \(recipe.servingNoun)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Spacer()
                 servingsStepper
             }
@@ -316,6 +366,10 @@ struct RecipeDetailView: View {
 
     private func ingredientText(_ ingredient: Ingredient, name: String) -> Text {
         if let amount = ingredient.amountText(scale: scale) {
+            // "2 un Iogurte (240 g)": o peso ajuda a pesar sem fazer contas.
+            if let weight = ingredient.weightText(scale: scale) {
+                return Text("\(Text(amount).fontWeight(.semibold))  \(name)  \(Text(weight).foregroundStyle(.secondary))")
+            }
             return Text("\(Text(amount).fontWeight(.semibold))  \(name)")
         }
         if ingredient.unit.isEmpty {
@@ -343,6 +397,16 @@ struct RecipeDetailView: View {
             if steps.isEmpty {
                 Text("Sem passos registados.")
                     .foregroundStyle(.secondary)
+            } else {
+                Button {
+                    cooking = true
+                } label: {
+                    Label(completedSteps.isEmpty ? "Modo cozinhar" : "Continuar no modo cozinhar", systemImage: "play.fill")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.glassProminent)
             }
             ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
                 stepRow(number: index + 1, step: step)

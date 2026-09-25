@@ -265,6 +265,10 @@ jobs:
           shot 35-definicoes-expira -screenshotSettings YES -screenshotBackupState ready -screenshotExpiryDays 1
           shot 36-sidestore -screenshotSettings YES -screenshotSettingsPage sidestore -screenshotExpiryDays 5
           shot 37-etiquetas -screenshotSettings YES -screenshotSettingsPage etiquetas
+          shot 38-modo-cozinhar -screenshotOpenFirst YES -screenshotCooking YES -screenshotCookingStep 0
+          shot 39-inicio-congelador -screenshotWaiting YES
+          shot 40-receita-espera -screenshotWaiting YES -screenshotOpenFirst YES -screenshotDetailWait YES
+          shot 41-receita-ingredientes -screenshotOpenFirst YES -screenshotDetailScroll YES -screenshotDetailIngredients YES
           shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
           shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
           shot 26-partilhar-stories -screenshotOpenFirst YES -screenshotShare YES -screenshotShareFormat story

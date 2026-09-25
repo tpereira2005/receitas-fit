@@ -1,4 +1,5 @@
 import CoreSpotlight
+import UserNotifications
 import SwiftUI
 import SwiftData
 
@@ -8,6 +9,8 @@ struct ReceitasFitApp: App {
 
     init() {
         container = DataStore.shared
+        // Temporizadores e esperas avisam também com a app aberta.
+        UNUserNotificationCenter.current().delegate = NotificationHandler.shared
     }
 
     var body: some Scene {

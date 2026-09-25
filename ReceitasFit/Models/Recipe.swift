@@ -209,6 +209,17 @@ extension Recipe {
         }
     }
 
+    /// Peso aproximado de cada porção, somando os ingredientes com peso conhecido (ml conta como g).
+    /// `nil` se menos de metade dos ingredientes (sem os q.b.) tiver peso.
+    var weightPerServing: Double? {
+        let measured = ingredients.filter { $0.unit != IngredientUnit.toTaste.rawValue && ($0.amount ?? 0) > 0 }
+        guard !measured.isEmpty else { return nil }
+        let weights = measured.compactMap { $0.snapshot?.grams(for: $0) }
+        guard weights.count * 2 >= measured.count else { return nil }
+        let total = weights.reduce(0, +)
+        return total > 0 ? total / Double(max(1, servings)) : nil
+    }
+
     /// "2 doses", "1 porção".
     var servingsText: String { ServingName.count(servings, noun: servingNoun) }
 
@@ -260,6 +271,16 @@ nonisolated extension Ingredient {
         let number = value.formatted(.number.precision(.fractionLength(0...(value < 10 ? 2 : 0))))
         let unitText = portionID == nil ? unit : FoodPortion.pluralize(unit, amount: value)
         return unitText.isEmpty ? number : "\(number) \(unitText)"
+    }
+
+    /// Peso (ou volume) em gramas/ml, já com a escala, quando a medida não é essa: "2 iogurtes" → "240 g".
+    /// `nil` para g, ml, q.b. ou medidas sem conversão.
+    func weightText(scale: Double = 1) -> String? {
+        guard unit != IngredientUnit.gram.rawValue, unit != IngredientUnit.milliliter.rawValue,
+              let snapshot, let grams = snapshot.grams(for: self), grams > 0 else { return nil }
+        let value = grams * scale
+        let number = value.formatted(.number.precision(.fractionLength(0...(value < 10 ? 1 : 0))))
+        return "\(number) \(snapshot.base)"
     }
 
     func displayText(scale: Double = 1) -> String {

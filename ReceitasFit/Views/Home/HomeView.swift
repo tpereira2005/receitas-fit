@@ -26,6 +26,13 @@ struct HomeView: View {
 
     private var tags: [(tag: String, count: Int)] { TagLibrary.counts(in: recipes) }
 
+    /// Receitas à espera (no congelador, frigorífico…), as que ficam prontas primeiro à frente.
+    private var waiting: [Recipe] {
+        recipes
+            .filter { $0.frozenAt != nil && $0.waitKind != nil }
+            .sorted { (WaitReminder.readyDate(of: $0) ?? .distantFuture) < (WaitReminder.readyDate(of: $1) ?? .distantFuture) }
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             Group {
@@ -83,6 +90,10 @@ struct HomeView: View {
                 }
 
                 recentSection
+
+                if !waiting.isEmpty {
+                    waitingSection
+                }
 
                 if !recentlyCooked.isEmpty {
                     carousel(title: "Feitas recentemente", recipes: recentlyCooked, source: "cooked", showsCookedDate: true)
@@ -200,6 +211,48 @@ struct HomeView: View {
         }
     }
 
+    /// Gelados no congelador (e outras esperas): quanto falta ou "Pronto".
+    private var waitingSection: some View {
+        let kinds = Set(waiting.compactMap(\.waitKind))
+        let title = kinds.count == 1 ? kinds.first!.waitingTitle : "À espera"
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(.title3.bold())
+                .padding(.horizontal)
+            TimelineView(.periodic(from: .now, by: 60)) { timeline in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 12) {
+                        ForEach(waiting) { recipe in
+                            let route = RecipeRoute(recipe: recipe, source: "waiting")
+                            let ready = WaitReminder.isReady(recipe, now: timeline.date)
+                            NavigationLink(value: route) {
+                                CompactRecipeCard(
+                                    recipe: recipe,
+                                    caption: waitCaption(recipe, now: timeline.date),
+                                    captionSymbol: ready ? "bell.fill" : (recipe.waitKind?.symbol ?? "hourglass"),
+                                    captionColor: ready ? .green : .secondary,
+                                    captionPrefix: "",
+                                    transitionID: route.transitionID,
+                                    namespace: namespace
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, 16, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollClipDisabled()
+            }
+        }
+    }
+
+    private func waitCaption(_ recipe: Recipe, now: Date) -> String {
+        guard let ready = WaitReminder.readyDate(of: recipe) else { return "" }
+        if ready <= now { return recipe.waitKind?.readyTitle ?? "Pronta" }
+        return Format.remaining(Int(ready.timeIntervalSince(now) / 60) + 1)
+    }
+
     /// Fila horizontal de cartões pequenos, com "Ver todas" opcional.
     private func carousel(title: String, recipes: [Recipe], source: String,
                           seeAll: RecipeFilter? = nil, showsCookedDate: Bool = false) -> some View {
@@ -246,6 +299,13 @@ struct HomeView: View {
             }
             try? context.save()
         }
+        // Capturas do CI: um gelado no congelador há 20 horas e outro já pronto.
+        if ScreenshotMode.flag("screenshotWaiting"), !recipes.contains(where: { $0.frozenAt != nil }) {
+            let frozen = recipes.filter { $0.waitKind == .freezer }
+            frozen.first?.frozenAt = .now.addingTimeInterval(-20 * 3600)
+            frozen.dropFirst().first?.frozenAt = .now.addingTimeInterval(-26 * 3600)
+            try? context.save()
+        }
         if ScreenshotMode.flag("screenshotOpenFirst"), path.isEmpty, let first = recipes.first {
             path.append(RecipeRoute(recipe: first))
         }
@@ -262,6 +322,10 @@ struct HomeView: View {
 struct CompactRecipeCard: View {
     let recipe: Recipe
     var caption: String?
+    var captionSymbol = "checkmark.circle.fill"
+    var captionColor: Color = .secondary
+    /// Leitura do VoiceOver para a legenda ("última vez ontem").
+    var captionPrefix = "última vez"
     let transitionID: String
     let namespace: Namespace.ID
 
@@ -277,9 +341,9 @@ struct CompactRecipeCard: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             if let caption {
-                Label(caption, systemImage: "checkmark.circle.fill")
+                Label(caption, systemImage: captionSymbol)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(captionColor)
             } else if recipe.calories > 0 {
                 Text("\(Int(recipe.calories.rounded())) kcal")
                     .font(.caption)
@@ -289,7 +353,7 @@ struct CompactRecipeCard: View {
         .frame(width: 132, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(caption.map { "\(recipe.accessibilitySummary), última vez \($0)" } ?? recipe.accessibilitySummary)
+        .accessibilityLabel(caption.map { "\(recipe.accessibilitySummary), \(captionPrefix) \($0)" } ?? recipe.accessibilitySummary)
     }
 }
 
