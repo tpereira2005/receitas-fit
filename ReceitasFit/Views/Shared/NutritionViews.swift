@@ -166,8 +166,6 @@ struct FoodIcon: View {
     var imageKey: String?
     var size: CGFloat = 32
 
-    @Environment(\.colorScheme) private var colorScheme
-
     init(category: FoodCategory, imageData: Data? = nil, imageKey: String? = nil, size: CGFloat = 32) {
         self.category = category
         self.imageData = imageData
@@ -194,29 +192,16 @@ struct FoodIcon: View {
         return UIImage(data: imageData)
     }
 
-    /// Fundo das imagens: no claro, 14% da cor da categoria; no escuro, um cinzento com 22% da cor.
-    /// (No escuro, 14% sobre o fundo quase preto dava um quadrado escuro e apagado ao lado
-    /// dos ícones de cor cheia.)
-    @ViewBuilder
-    private var imageBackground: some View {
-        if colorScheme == .dark {
-            ZStack {
-                Color(red: 58 / 255, green: 58 / 255, blue: 62 / 255)
-                category.color.opacity(0.22)
-            }
-        } else {
-            category.color.opacity(0.14)
-        }
-    }
-
     var body: some View {
         if let customImage {
-            // Imagens com fundo transparente ficam sobre um tom suave da categoria.
+            // Imagens com fundo transparente ficam sobre a cor da categoria, como os ícones sem imagem.
+            // A sombra suave separa o alimento do fundo quando têm cores parecidas (morangos no rosa).
             Image(uiImage: customImage)
                 .resizable()
                 .scaledToFill()
                 .frame(width: size, height: size)
-                .background(imageBackground)
+                .shadow(color: .black.opacity(0.25), radius: size * 0.05, y: size * 0.025)
+                .background(category.color.gradient)
                 .clipShape(shape)
         } else {
             category.glyph
