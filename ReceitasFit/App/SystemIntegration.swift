@@ -46,7 +46,7 @@ enum SpotlightIndex {
         var details = [recipe.category.title]
         if recipe.calories > 0 { details.append("\(Int(recipe.calories.rounded())) kcal") }
         if recipe.protein > 0 { details.append("\(recipe.protein.cleanString) g proteína") }
-        if recipe.totalMinutes > 0 { details.append(Format.minutes(recipe.totalMinutes)) }
+        if let time = recipe.timeText { details.append(time) }
         attributes.contentDescription = details.joined(separator: " · ")
         attributes.keywords = [recipe.category.title] + recipe.tags + recipe.ingredients.map(\.name)
         attributes.thumbnailData = recipe.thumbnailData

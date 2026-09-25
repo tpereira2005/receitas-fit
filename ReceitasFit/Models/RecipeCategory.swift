@@ -104,7 +104,7 @@ nonisolated enum QuickFilter: String, CaseIterable, Identifiable, Hashable, Send
         switch self {
         case .highProtein: recipe.protein >= 25
         case .lowCalorie: recipe.calories > 0 && recipe.calories <= 400
-        case .quick: recipe.totalMinutes > 0 && recipe.totalMinutes <= 20
+        case .quick: recipe.totalMinutes > 0 && recipe.readyMinutes <= 20
         case .favorites: recipe.isFavorite
         }
     }
@@ -168,7 +168,7 @@ enum RecipeSort: String, CaseIterable, Identifiable {
         case .name: recipes.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         case .calories: recipes.sorted { $0.calories < $1.calories }
         case .protein: recipes.sorted { $0.protein > $1.protein }
-        case .time: recipes.sorted { $0.totalMinutes < $1.totalMinutes }
+        case .time: recipes.sorted { $0.readyMinutes < $1.readyMinutes }
         case .recentlyCooked:
             // As feitas mais recentemente primeiro; as nunca feitas no fim, das mais novas para as mais antigas.
             recipes.sorted { a, b in

@@ -24,6 +24,8 @@ struct RecipeEditorView: View {
     @State private var showingPicker = false
     @State private var editingIngredient: Ingredient?
     @State private var newTag = ""
+    @State private var namingServing = false
+    @State private var customServingName = ""
     private let isDuplicate: Bool
 
     init(recipe: Recipe? = nil) {
@@ -103,6 +105,16 @@ struct RecipeEditorView: View {
             } message: {
                 Text("As alterações a esta receita vão perder-se.")
             }
+            .alert("Nome de cada porção", isPresented: $namingServing) {
+                TextField("Ex.: bola, taça, barra", text: $customServingName)
+                Button("Cancelar", role: .cancel) {}
+                Button("Usar") {
+                    let name = ServingName.noun(customServingName)
+                    draft.servingName = name == "porção" ? "" : name
+                }
+            } message: {
+                Text("No singular. A app escreve o plural sozinha (“2 taças”).")
+            }
             .sheet(isPresented: $showingPicker) {
                 IngredientPickerView { ingredient in
                     withAnimation { draft.ingredients.append(ingredient) }
@@ -131,7 +143,8 @@ struct RecipeEditorView: View {
             }
             .sheet(isPresented: $showingFocusEditor) {
                 if let photoImage {
-                    PhotoFocusEditor(image: photoImage, focusX: $draft.photoFocusX, focusY: $draft.photoFocusY)
+                    PhotoFocusEditor(image: photoImage, title: draft.title, focusX: $draft.photoFocusX,
+                                     focusY: $draft.photoFocusY, zoom: $draft.photoZoom)
                 }
             }
         }
@@ -153,7 +166,7 @@ struct RecipeEditorView: View {
                     .frame(maxWidth: .infinity)
                     .overlay {
                         if let photoImage {
-                            FocusedImage(image: photoImage, focus: UnitPoint(x: draft.photoFocusX, y: draft.photoFocusY))
+                            FocusedImage(image: photoImage, focus: UnitPoint(x: draft.photoFocusX, y: draft.photoFocusY), zoom: draft.photoZoom)
                         } else {
                             ZStack {
                                 Rectangle().fill(draft.category.color.gradient)
@@ -198,6 +211,7 @@ struct RecipeEditorView: View {
                         draft.thumbnailData = nil
                         draft.photoFocusX = 0.5
                         draft.photoFocusY = 0.5
+                        draft.photoZoom = 1
                         photoItem = nil
                         photoImage = nil
                     }
@@ -220,14 +234,55 @@ struct RecipeEditorView: View {
         }
     }
 
+    private var servingNoun: String { ServingName.noun(draft.servingName) }
+
     private var timeSection: some View {
-        Section("Tempo e porções") {
+        Section {
             Stepper(value: $draft.servings, in: 1...50) {
-                LabeledContent("Porções", value: "\(draft.servings)")
+                LabeledContent("Rende", value: ServingName.count(draft.servings, noun: servingNoun))
+            }
+            LabeledContent("Nome de cada porção") {
+                Menu {
+                    ForEach(ServingName.presets, id: \.self) { name in
+                        Button {
+                            draft.servingName = name == "porção" ? "" : name
+                        } label: {
+                            if name == servingNoun {
+                                Label(name.capitalizedFirst, systemImage: "checkmark")
+                            } else {
+                                Text(name.capitalizedFirst)
+                            }
+                        }
+                    }
+                    Divider()
+                    Button("Outro nome…", systemImage: "pencil") {
+                        customServingName = ServingName.presets.contains(servingNoun) ? "" : servingNoun
+                        namingServing = true
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(servingNoun.capitalizedFirst)
+                        Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.semibold))
+                    }
+                }
             }
             IntegerFieldRow(title: "Preparação", unit: "min", value: $draft.prepMinutes)
             IntegerFieldRow(title: "Confeção", unit: "min", value: $draft.cookMinutes)
+            WaitTimeRow(minutes: $draft.waitMinutes)
+            if draft.waitMinutes > 0 {
+                Picker("Espera", selection: $draft.waitKind) {
+                    ForEach(WaitKind.allCases) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+        } header: {
+            Text("Tempo e porções")
+        } footer: {
+            Text("A espera (congelar, frigorífico, repousar) não conta para as receitas rápidas.")
         }
+        .animation(.snappy, value: draft.waitMinutes > 0)
     }
 
     private var ingredientsSection: some View {
@@ -285,7 +340,7 @@ struct RecipeEditorView: View {
                 MacroStrip(facts: perServing)
                     .padding(.vertical, 6)
                 NutritionLabel(columns: [
-                    .init(title: "Por porção", facts: perServing),
+                    .init(title: "Por \(servingNoun)", facts: perServing),
                     .init(title: "Receita toda", facts: summary.total),
                 ])
                 .padding(.vertical, 4)
@@ -304,7 +359,7 @@ struct RecipeEditorView: View {
                 )
                 .foregroundStyle(.orange)
             } else if !draft.ingredients.isEmpty {
-                Text("Valores por porção, com \(Format.servings(draft.servings)).")
+                Text("Valores por \(servingNoun), com \(ServingName.count(draft.servings, noun: servingNoun)).")
             }
         }
     }
@@ -459,6 +514,7 @@ struct RecipeEditorView: View {
                     draft.thumbnailData = processed.thumbnail
                     draft.photoFocusX = 0.5
                     draft.photoFocusY = 0.5
+                    draft.photoZoom = 1
                     photoImage = UIImage(data: processed.photo)
                 }
             }

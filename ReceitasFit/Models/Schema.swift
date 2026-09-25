@@ -78,19 +78,95 @@ nonisolated enum SchemaV1: VersionedSchema {
 nonisolated enum SchemaV2: VersionedSchema {
     static let versionIdentifier = Schema.Version(2, 0, 0)
     static var models: [any PersistentModel.Type] { [Recipe.self, Food.self] }
+
+    @Model
+    final class Recipe {
+        var id: UUID = UUID()
+        var title: String = ""
+        var summary: String = ""
+        var categoryRaw: String = "lunch"
+        var tags: [String] = []
+        var servings: Int = 1
+        var prepMinutes: Int = 0
+        var cookMinutes: Int = 0
+        var calories: Double = 0
+        var protein: Double = 0
+        var carbs: Double = 0
+        var fat: Double = 0
+        var fiber: Double = 0
+        var sugars: Double = 0
+        var saturatedFat: Double = 0
+        var salt: Double = 0
+        var nutritionIsComputed: Bool = false
+        var sourceURL: String = ""
+        var notes: String = ""
+        var isFavorite: Bool = false
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
+        @Attribute(.externalStorage) var photoData: Data?
+        var thumbnailData: Data?
+        var ingredientsData: Data = Data()
+        var stepsData: Data = Data()
+        var isSample: Bool = false
+        var cookedDates: [Date] = []
+        var photoFocusX: Double = 0.5
+        var photoFocusY: Double = 0.5
+
+        init(title: String = "") {
+            self.title = title
+        }
+    }
+
+    @Model
+    final class Food {
+        var id: UUID = UUID()
+        var name: String = ""
+        var brand: String = ""
+        var categoryRaw: String = "other"
+        var measureBaseRaw: String = "g"
+        var unitWeight: Double?
+        @Attribute(.externalStorage) var imageData: Data?
+        var calories: Double = 0
+        var protein: Double = 0
+        var carbs: Double = 0
+        var sugars: Double = 0
+        var fat: Double = 0
+        var saturatedFat: Double = 0
+        var fiber: Double = 0
+        var salt: Double = 0
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
+        var portionsData: Data = Data()
+        var tablespoonWeight: Double?
+        var teaspoonWeight: Double?
+
+        init(name: String = "") {
+            self.name = name
+        }
+    }
+}
+
+/// Versão 3 (app 1.4): tempo de espera, nome da porção, zoom da fotografia, gelados no congelador
+/// e "Apagadas recentemente".
+nonisolated enum SchemaV3: VersionedSchema {
+    static let versionIdentifier = Schema.Version(3, 0, 0)
+    static var models: [any PersistentModel.Type] { [Recipe.self, Food.self] }
 }
 
 nonisolated enum ReceitasMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [SchemaV1.self, SchemaV2.self] }
+    static var schemas: [any VersionedSchema.Type] { [SchemaV1.self, SchemaV2.self, SchemaV3.self] }
     // Só se acrescentam campos com valores por omissão: migração automática, sem perda de dados.
     static var stages: [MigrationStage] {
-        [.lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self)]
+        [
+            .lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self),
+            .lightweight(fromVersion: SchemaV2.self, toVersion: SchemaV3.self),
+        ]
     }
 }
 
 /// Cria o contentor de dados da app, protegendo a base de dados antes de a abrir.
 enum DataStore {
-    static let schema = Schema(versionedSchema: SchemaV2.self)
+    static let schema = Schema(versionedSchema: SchemaV3.self)
 
     /// O contentor único da app, partilhado pela interface, pelos Atalhos/Siri e pelo Spotlight.
     static let shared: Result<ModelContainer, Error> = Result { try makeContainer() }

@@ -126,6 +126,12 @@ struct RecipeDTO: Codable {
     var cookedDates: [Date]?
     var photoFocusX: Double?
     var photoFocusY: Double?
+    // Ausentes em cópias anteriores à versão 1.4.
+    var waitMinutes: Int?
+    var waitKind: String?
+    var servingName: String?
+    var photoZoom: Double?
+    var frozenAt: Date?
     var sourceURL: String
     var notes: String
     var isFavorite: Bool
@@ -157,6 +163,11 @@ struct RecipeDTO: Codable {
         cookedDates = recipe.cookedDates
         photoFocusX = recipe.photoFocusX
         photoFocusY = recipe.photoFocusY
+        waitMinutes = recipe.waitMinutes
+        waitKind = recipe.waitKindRaw
+        servingName = recipe.servingName
+        photoZoom = recipe.photoZoom
+        frozenAt = recipe.frozenAt
         sourceURL = recipe.sourceURL
         notes = recipe.notes
         isFavorite = recipe.isFavorite
@@ -189,6 +200,11 @@ struct RecipeDTO: Codable {
         recipe.cookedDates = cookedDates ?? []
         recipe.photoFocusX = photoFocusX ?? 0.5
         recipe.photoFocusY = photoFocusY ?? 0.5
+        recipe.waitMinutes = waitMinutes ?? 0
+        recipe.waitKindRaw = waitKind ?? ""
+        recipe.servingName = servingName ?? ""
+        recipe.photoZoom = photoZoom ?? 1
+        recipe.frozenAt = frozenAt
         recipe.sourceURL = sourceURL
         recipe.notes = notes
         recipe.isFavorite = isFavorite

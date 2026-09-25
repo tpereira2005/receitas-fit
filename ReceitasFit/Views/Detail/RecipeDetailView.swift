@@ -171,24 +171,25 @@ struct RecipeDetailView: View {
                 Text(recipe.summary)
                     .foregroundStyle(.secondary)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    if recipe.prepMinutes > 0 {
-                        InfoPill(symbol: "timer", text: "Prep. \(Format.minutes(recipe.prepMinutes))")
-                    }
-                    if recipe.cookMinutes > 0 {
-                        InfoPill(symbol: "frying.pan", text: "Confeção \(Format.minutes(recipe.cookMinutes))")
-                    }
-                    InfoPill(symbol: "person.2", text: Format.servings(recipe.servings))
-                    if recipe.timesCooked > 0 {
-                        InfoPill(symbol: "checkmark.circle", text: recipe.timesCooked == 1 ? "Feita 1 vez" : "Feita \(recipe.timesCooked) vezes")
-                    }
-                    ForEach(recipe.tags, id: \.self) { tag in
-                        InfoPill(symbol: "tag", text: tag)
-                    }
+            // Em várias linhas: numa só linha com scroll, as últimas ficavam cortadas ("Ninja CRE…").
+            FlowLayout(spacing: 8) {
+                if recipe.prepMinutes > 0 {
+                    InfoPill(symbol: "timer", text: "Prep. \(Format.minutes(recipe.prepMinutes))")
+                }
+                if recipe.cookMinutes > 0 {
+                    InfoPill(symbol: "frying.pan", text: "Confeção \(Format.minutes(recipe.cookMinutes))")
+                }
+                if let kind = recipe.waitKind {
+                    InfoPill(symbol: kind.symbol, text: kind.phrase(recipe.waitMinutes).capitalizedFirst)
+                }
+                InfoPill(symbol: "person.2", text: recipe.servingsText)
+                if recipe.timesCooked > 0 {
+                    InfoPill(symbol: "checkmark.circle", text: recipe.timesCooked == 1 ? "Feita 1 vez" : "Feita \(recipe.timesCooked) vezes")
+                }
+                ForEach(recipe.tags, id: \.self) { tag in
+                    InfoPill(symbol: "tag", text: tag)
                 }
             }
-            .scrollClipDisabled()
         }
     }
 
@@ -211,7 +212,8 @@ struct RecipeDetailView: View {
                 note = "Valores introduzidos à mão. Edita a receita e escolhe os ingredientes da biblioteca para passarem a ser calculados."
             }
         }
-        return NutritionCard(perServing: perServing, servings: servings, originalServings: recipe.servings, note: note)
+        return NutritionCard(perServing: perServing, servings: servings, originalServings: recipe.servings, note: note,
+                             servingNoun: recipe.servingNoun)
     }
 
     // MARK: - Ingredientes
@@ -251,7 +253,7 @@ struct RecipeDetailView: View {
                 Image(systemName: "minus").frame(width: 34, height: 34)
             }
             .disabled(servings <= 1)
-            Text(Format.servings(servings))
+            Text(ServingName.count(servings, noun: recipe.servingNoun))
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
                 .contentTransition(.numericText())
@@ -268,8 +270,8 @@ struct RecipeDetailView: View {
         .glassEffect(.regular.interactive(), in: .capsule)
         // Para o VoiceOver é um único controlo ajustável (deslizar para cima/baixo).
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Porções")
-        .accessibilityValue(Format.servings(servings))
+        .accessibilityLabel(ServingName.plural(recipe.servingNoun, count: 2).capitalizedFirst)
+        .accessibilityValue(ServingName.count(servings, noun: recipe.servingNoun))
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: servings = min(99, servings + 1)

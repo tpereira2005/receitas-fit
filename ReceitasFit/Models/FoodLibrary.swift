@@ -138,7 +138,7 @@ enum FoodLibrary {
 
 /// Atualizações de dados entre versões da app.
 enum DataMigration {
-    static let currentVersion = 5
+    static let currentVersion = 6
 
     @MainActor
     static func migrate(_ context: ModelContext, from version: Int) {
@@ -146,6 +146,13 @@ enum DataMigration {
         if version < 3 { migrateToV3(context) }
         if version < 4 { migrateToV4(context) }
         if version < 5 { migrateToV5(context) }
+        if version < 6 { migrateToV6(context) }
+    }
+
+    /// Versão 6 (app 1.4): tempo de espera e nome da porção nas receitas de origem.
+    @MainActor
+    static func migrateToV6(_ context: ModelContext) {
+        BaseContent.applyNewFields(into: context)
     }
 
     /// Versão 5: conteúdo de origem (gelados da Ninja CREAMi e Cookie Dough Cake).

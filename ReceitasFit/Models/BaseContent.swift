@@ -55,6 +55,43 @@ enum BaseContent {
         return result
     }
 
+    /// Leva às receitas de origem que já existem os campos novos da versão 1.4 (tempo de espera,
+    /// nome da porção, confeção), sem mexer no que o utilizador já tenha preenchido.
+    /// Tira também a nota "Rende 2 doses.", que passou a estar no nome da porção.
+    @MainActor
+    @discardableResult
+    static func applyNewFields(into context: ModelContext, from content: RecipeBackup? = load()) -> Int {
+        guard let content else { return 0 }
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        var byTitle: [String: RecipeDTO] = [:]
+        for dto in content.recipes { byTitle[dto.title.searchNormalized] = dto }
+        var changed = 0
+        for recipe in recipes {
+            guard let dto = byTitle[recipe.title.searchNormalized] else { continue }
+            var touched = false
+            if recipe.waitMinutes == 0, let wait = dto.waitMinutes, wait > 0 {
+                recipe.waitMinutes = wait
+                recipe.waitKindRaw = dto.waitKind ?? ""
+                touched = true
+            }
+            if recipe.servingName.isEmpty, let name = dto.servingName, !name.isEmpty {
+                recipe.servingName = name
+                touched = true
+            }
+            if recipe.cookMinutes == 0, dto.cookMinutes > 0 {
+                recipe.cookMinutes = dto.cookMinutes
+                touched = true
+            }
+            if recipe.notes.trimmed == "Rende 2 doses." {
+                recipe.notes = ""
+                touched = true
+            }
+            if touched { changed += 1 }
+        }
+        try? context.save()
+        return changed
+    }
+
     /// Insere os alimentos de origem que faltam (compara pelo nome), com as imagens. Devolve quantos entraram.
     @MainActor
     @discardableResult

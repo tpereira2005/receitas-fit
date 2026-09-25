@@ -66,6 +66,40 @@ struct BrowseTests {
         #expect(a.tags == ["Meal prep"] && b.tags.isEmpty && c.tags.isEmpty)
     }
 
+    /// A espera (congelador) conta para "Até 20 min" e aparece no tempo dos cartões.
+    @Test func waitTimeKeepsFrozenRecipesOutOfQuick() {
+        let gelado = recipe("Gelado")
+        gelado.prepMinutes = 10
+        gelado.waitMinutes = 1440
+        gelado.waitKind = .freezer
+        let wrap = recipe("Wrap")
+        wrap.prepMinutes = 15
+        #expect(!QuickFilter.quick.matches(gelado))
+        #expect(QuickFilter.quick.matches(wrap))
+        #expect(gelado.timeText == "10 min + 24 h")
+        #expect(wrap.timeText == "15 min")
+        #expect(WaitKind.fridge.phrase(150) == "2 h 30 min no frigorífico")
+        #expect(RecipeSort.time.sorted([gelado, wrap]).first === wrap)
+    }
+
+    @Test func servingNamesPluralize() {
+        #expect(ServingName.count(1, noun: "dose") == "1 dose")
+        #expect(ServingName.count(2, noun: "dose") == "2 doses")
+        #expect(ServingName.count(3, noun: ServingName.noun("")) == "3 porções")
+        #expect(ServingName.count(2, noun: "unidade") == "2 unidades")
+        #expect(ServingName.count(4, noun: ServingName.noun(" Taça ")) == "4 taças")
+    }
+
+    /// Com zoom, a imagem cresce e o foco continua a não deixar bordas vazias.
+    @Test func focusedImageZoomCoversContainer() {
+        let image = CGSize(width: 1000, height: 1000)
+        let container = CGSize(width: 82, height: 100)
+        let plain = FocusedImage.frame(for: image, in: container, focus: .center)
+        let zoomed = FocusedImage.frame(for: image, in: container, focus: UnitPoint(x: 0, y: 1), zoom: 2)
+        #expect(plain.width == 100 && zoomed.width == 200)
+        #expect(zoomed.minX == 0 && zoomed.maxY == 100)
+    }
+
     @Test func tagCatalogKeepsOriginalsAndCreatedTags() {
         UserDefaults.standard.removeObject(forKey: TagLibrary.catalogKey)
         defer { UserDefaults.standard.removeObject(forKey: TagLibrary.catalogKey) }

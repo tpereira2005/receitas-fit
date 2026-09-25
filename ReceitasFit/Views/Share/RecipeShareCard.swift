@@ -17,18 +17,22 @@ struct RecipeShareCard: View {
         var category: RecipeCategory
         var photo: UIImage?
         var focus: UnitPoint
+        var zoom: Double
         var perServing: NutritionFacts
-        var servings: Int
-        var totalMinutes: Int
+        var servingNoun: String
+        var servingsText: String
+        var timeText: String?
 
         init(recipe: Recipe) {
             title = recipe.title
             category = recipe.category
             photo = (recipe.photoData ?? recipe.thumbnailData).flatMap(UIImage.init(data:))
             focus = recipe.photoFocus
+            zoom = recipe.photoZoom
             perServing = recipe.perServing
-            servings = recipe.servings
-            totalMinutes = recipe.totalMinutes
+            servingNoun = recipe.servingNoun
+            servingsText = recipe.servingsText
+            timeText = recipe.timeText
         }
     }
 
@@ -115,7 +119,7 @@ struct RecipeShareCard: View {
     @ViewBuilder
     private var photo: some View {
         if let image = content.photo {
-            FocusedImage(image: image, focus: content.focus)
+            FocusedImage(image: image, focus: content.focus, zoom: content.zoom)
         } else {
             // Sem fotografia: o ícone da categoria fica na parte de cima, longe do título.
             RecipePlaceholder(category: content.category, symbolSize: 64, alignment: format == .square ? .top : .center)
@@ -133,9 +137,9 @@ struct RecipeShareCard: View {
     }
 
     private var details: String {
-        var parts = ["por porção"]
-        if content.totalMinutes > 0 { parts.append("\(content.totalMinutes) min") }
-        parts.append(Format.servings(content.servings))
+        var parts = ["por \(content.servingNoun)"]
+        if let time = content.timeText { parts.append(time) }
+        parts.append(content.servingsText)
         return parts.joined(separator: " · ")
     }
 

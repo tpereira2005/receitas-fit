@@ -159,6 +159,34 @@ struct IntegerFieldRow: View {
     }
 }
 
+/// Tempo de espera em horas e minutos (24 h escreve-se "24", não "1440").
+struct WaitTimeRow: View {
+    @Binding var minutes: Int
+
+    var body: some View {
+        HStack {
+            Text("Espera")
+            Spacer()
+            NumberField("0", integer: Binding(
+                get: { minutes / 60 },
+                set: { minutes = max(0, $0) * 60 + minutes % 60 }
+            ))
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: 44)
+            Text("h").foregroundStyle(.secondary)
+            NumberField("0", integer: Binding(
+                get: { minutes % 60 },
+                set: { minutes = (minutes / 60) * 60 + min(59, max(0, $0)) }
+            ))
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: 36)
+            Text("min")
+                .foregroundStyle(.secondary)
+                .frame(width: 34, alignment: .leading)
+        }
+    }
+}
+
 /// Ícone de um alimento: a imagem personalizada, se existir, ou o ícone da categoria.
 struct FoodIcon: View {
     let category: FoodCategory

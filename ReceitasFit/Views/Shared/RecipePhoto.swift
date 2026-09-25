@@ -11,19 +11,22 @@ struct RecipePhoto: View {
     /// Miniatura descodificada em segundo plano (as grelhas não esperam por ela).
     @State private var loaded: UIImage?
 
+    /// Com zoom, a miniatura (800 px) fica pouco nítida nos cartões: usa-se a fotografia original.
+    private var zoomed: Bool { recipe.photoZoom > 1.05 && recipe.photoData != nil }
+
     private var data: Data? {
         switch variant {
-        case .thumbnail: recipe.thumbnailData ?? recipe.photoData
+        case .thumbnail: zoomed ? recipe.photoData : recipe.thumbnailData ?? recipe.photoData
         case .full: recipe.photoData ?? recipe.thumbnailData
         }
     }
 
     private var key: String {
-        "\(recipe.id.uuidString)-\(variant.rawValue)-\(recipe.updatedAt.timeIntervalSince1970)"
+        "\(recipe.id.uuidString)-\(variant.rawValue)-\(recipe.updatedAt.timeIntervalSince1970)-\(zoomed)"
     }
 
     /// Cartões: ~600 px chegam para o maior cartão num ecrã 3×; o topo da receita usa a imagem inteira.
-    private var maxPixelSize: CGFloat? { variant == .thumbnail ? 600 : nil }
+    private var maxPixelSize: CGFloat? { variant == .thumbnail ? 600 * min(recipe.photoZoom, FocusedImage.maxZoom) : nil }
 
     private var image: UIImage? {
         guard let data else { return nil }
@@ -36,7 +39,7 @@ struct RecipePhoto: View {
     var body: some View {
         Group {
             if let image {
-                FocusedImage(image: image, focus: recipe.photoFocus)
+                FocusedImage(image: image, focus: recipe.photoFocus, zoom: recipe.photoZoom)
             } else if data != nil {
                 // A carregar: só a cor da categoria, sem ícone (evita um salto quando a foto aparece).
                 Rectangle().fill(recipe.category.color.opacity(0.25))
@@ -56,12 +59,16 @@ struct RecipePhoto: View {
 /// Imagem que preenche o espaço disponível mantendo à vista o ponto de foco escolhido
 /// (por exemplo, o prato numa fotografia vertical mostrada num cartão largo).
 struct FocusedImage: View {
+    /// Zoom máximo no enquadramento.
+    static let maxZoom = 3.0
+
     let image: UIImage
     var focus: UnitPoint = .center
+    var zoom: Double = 1
 
     var body: some View {
         GeometryReader { geo in
-            let frame = Self.frame(for: image.size, in: geo.size, focus: focus)
+            let frame = Self.frame(for: image.size, in: geo.size, focus: focus, zoom: zoom)
             Image(uiImage: image)
                 .resizable()
                 .frame(width: frame.width, height: frame.height)
@@ -70,11 +77,11 @@ struct FocusedImage: View {
         .clipped()
     }
 
-    /// Posição da imagem escalada para cobrir `container`, com o foco o mais ao centro possível
-    /// sem deixar bordas vazias.
-    nonisolated static func frame(for imageSize: CGSize, in container: CGSize, focus: UnitPoint) -> CGRect {
+    /// Posição da imagem escalada para cobrir `container` (e aproximada com `zoom`), com o foco
+    /// o mais ao centro possível sem deixar bordas vazias.
+    nonisolated static func frame(for imageSize: CGSize, in container: CGSize, focus: UnitPoint, zoom: Double = 1) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0 else { return CGRect(origin: .zero, size: container) }
-        let scale = max(container.width / imageSize.width, container.height / imageSize.height)
+        let scale = max(container.width / imageSize.width, container.height / imageSize.height) * max(1, zoom)
         let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
         let x = min(0, max(container.width - size.width, container.width / 2 - focus.x * size.width))
         let y = min(0, max(container.height - size.height, container.height / 2 - focus.y * size.height))

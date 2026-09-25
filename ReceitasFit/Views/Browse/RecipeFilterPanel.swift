@@ -129,7 +129,19 @@ struct RecipeFilterPanel: View {
                 .buttonStyle(.glassProminent)
                 .disabled(resultCount == 0)
                 .padding(.horizontal)
+                .padding(.top, 12)
                 .padding(.bottom, 8)
+                // Fundo esbatido: as etiquetas que passam por baixo do botão deixam de se ver através dele.
+                .background {
+                    LinearGradient(
+                        stops: [
+                            .init(color: Color(.systemGroupedBackground).opacity(0), location: 0),
+                            .init(color: Color(.systemGroupedBackground), location: 0.35),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .ignoresSafeArea(edges: .bottom)
+                }
                 .animation(.snappy, value: resultCount)
             }
             .sensoryFeedback(.selection, trigger: draft)

@@ -56,6 +56,66 @@ struct DataTests {
         #expect(foods.first?.tablespoonWeight == nil)
     }
 
+    /// Uma base de dados da versão 1.3 (esquema V2) abre com o V3 sem perder nada.
+    @Test func migrationFromV2KeepsData() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "migracao-v2-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appending(path: "teste.store")
+
+        do {
+            let v2 = Schema(versionedSchema: SchemaV2.self)
+            let container = try ModelContainer(for: v2, configurations: ModelConfiguration(schema: v2, url: url))
+            let context = ModelContext(container)
+            let recipe = SchemaV2.Recipe(title: "Gelado Oreo")
+            recipe.servings = 2
+            recipe.photoFocusX = 0.3
+            recipe.cookedDates = [Date(timeIntervalSince1970: 1_700_000_000)]
+            context.insert(recipe)
+            let food = SchemaV2.Food(name: "Oreo")
+            food.tablespoonWeight = 9
+            context.insert(food)
+            try context.save()
+        }
+
+        let container = try ModelContainer(
+            for: DataStore.schema,
+            migrationPlan: ReceitasMigrationPlan.self,
+            configurations: ModelConfiguration(schema: DataStore.schema, url: url)
+        )
+        let context = ModelContext(container)
+        let recipe = try #require(try context.fetch(FetchDescriptor<Recipe>()).first)
+        #expect(recipe.title == "Gelado Oreo" && recipe.servings == 2 && recipe.photoFocusX == 0.3)
+        #expect(recipe.cookedDates.count == 1)
+        #expect(recipe.waitMinutes == 0 && recipe.servingName.isEmpty && recipe.photoZoom == 1)
+        #expect(recipe.deletedAt == nil && recipe.frozenAt == nil)
+        let food = try #require(try context.fetch(FetchDescriptor<Food>()).first)
+        #expect(food.tablespoonWeight == 9 && food.deletedAt == nil)
+    }
+
+    /// Versão 6: os gelados já instalados passam a ter 24 h no congelador e "doses".
+    @Test func migrationV6AddsWaitAndServingName() throws {
+        let context = ModelContext(try memoryContainer())
+        let biscoff = Recipe(title: "Gelado Biscoff", category: .iceCream)
+        biscoff.notes = "Rende 2 doses."
+        let cake = Recipe(title: "Cookie Dough Cake", category: .snack)
+        let mine = Recipe(title: "A minha receita")
+        let custom = Recipe(title: "Gelado Oreo", category: .iceCream)
+        custom.waitMinutes = 600
+        custom.waitKind = .freezer
+        [biscoff, cake, mine, custom].forEach(context.insert)
+
+        DataMigration.migrateToV6(context)
+
+        #expect(biscoff.waitMinutes == 1440 && biscoff.waitKind == .freezer)
+        #expect(biscoff.servingNoun == "dose" && biscoff.servingsText == "1 dose")
+        #expect(biscoff.notes.isEmpty)
+        #expect(cake.cookMinutes == 30 && cake.waitMinutes == 150 && cake.waitKind == .fridge)
+        #expect(mine.waitMinutes == 0 && mine.servingNoun == "porção")
+        // O que o utilizador já tinha preenchido fica como estava.
+        #expect(custom.waitMinutes == 600)
+    }
+
     @Test func backupRoundTripKeepsEverything() throws {
         let source = ModelContext(try memoryContainer())
         let food = Food(name: "Whey", category: .supplements)

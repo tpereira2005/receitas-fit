@@ -19,6 +19,8 @@ struct NutritionCard: View {
     /// Porções com que a receita foi guardada.
     var originalServings: Int? = nil
     var note: String?
+    /// Nome de uma porção desta receita ("porção", "dose"…).
+    var servingNoun = "porção"
 
     @State private var showsWholeRecipe = false
 
@@ -38,12 +40,13 @@ struct NutritionCard: View {
 
     private var footnote: String {
         let original = originalServings ?? servings
+        let count = { ServingName.count($0, noun: servingNoun) }
         if showsWholeRecipe {
             return servings == original
-                ? "Receita toda · \(Format.servings(servings))"
-                : "Receita ajustada para \(Format.servings(servings)) · original: \(Format.servings(original))"
+                ? "Receita toda · \(count(servings))"
+                : "Receita ajustada para \(count(servings)) · original: \(count(original))"
         }
-        return "Por porção · a receita rende \(Format.servings(original))"
+        return "Por \(servingNoun) · a receita rende \(count(original))"
     }
 
     private var macroCalories: Double { macros.reduce(0) { $0 + $1.kcal } }
@@ -55,7 +58,7 @@ struct NutritionCard: View {
                 Text("Nutrição").font(.title2.bold())
                 Spacer()
                 Picker("Valores", selection: $showsWholeRecipe.animation(.snappy)) {
-                    Text("Porção").tag(false)
+                    Text(servingNoun.capitalizedFirst).tag(false)
                     Text("Receita").tag(true)
                 }
                 .pickerStyle(.segmented)

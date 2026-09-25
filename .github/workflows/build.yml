@@ -20,7 +20,7 @@ env:
   SCHEME: ReceitasFit
   BUNDLE_ID: com.tpereira.receitasfit
   # Versão base; o número da build é acrescentado automaticamente (ex.: 1.1.7).
-  VERSION_BASE: "1.3"
+  VERSION_BASE: "1.4"
 
 jobs:
   tests:

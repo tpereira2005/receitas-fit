@@ -261,6 +261,10 @@ final class Food {
     var tablespoonWeight: Double?
     var teaspoonWeight: Double?
 
+    // Esquema V3
+    /// Data em que foi apagado; fica em "Apagadas recentemente" durante 30 dias.
+    var deletedAt: Date?
+
     init(name: String = "", category: FoodCategory = .other) {
         self.id = UUID()
         self.name = name

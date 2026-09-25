@@ -106,6 +106,19 @@ final class Recipe {
     var photoFocusX: Double = 0.5
     var photoFocusY: Double = 0.5
 
+    // Esquema V3
+    /// Tempo à espera (congelador, frigorífico, repouso), fora da preparação e da confeção.
+    var waitMinutes: Int = 0
+    var waitKindRaw: String = ""
+    /// Nome de uma porção no singular ("dose", "fatia"…). Vazio = "porção".
+    var servingName: String = ""
+    /// Zoom da fotografia nos recortes (1 = a fotografia a cobrir o recorte, sem aproximar).
+    var photoZoom: Double = 1
+    /// Quando a base foi para o congelador (gelados à espera de serem processados).
+    var frozenAt: Date?
+    /// Data em que foi apagada; fica em "Apagadas recentemente" durante 30 dias.
+    var deletedAt: Date?
+
     init(title: String = "", category: RecipeCategory = .lunch) {
         self.id = UUID()
         self.title = title
@@ -129,7 +142,19 @@ final class Recipe {
         set { stepsData = JSONCache.encode(newValue) }
     }
 
+    /// Tempo ativo: preparação e confeção.
     var totalMinutes: Int { prepMinutes + cookMinutes }
+
+    var waitKind: WaitKind? {
+        get { waitMinutes > 0 ? WaitKind(rawValue: waitKindRaw) ?? .rest : nil }
+        set { waitKindRaw = newValue?.rawValue ?? "" }
+    }
+
+    /// Tempo até estar pronta a comer, com a espera (congelador, frigorífico…).
+    var readyMinutes: Int { totalMinutes + waitMinutes }
+
+    /// Nome de uma porção desta receita no singular ("porção", "dose"…).
+    var servingNoun: String { ServingName.noun(servingName) }
 
     var timesCooked: Int { cookedDates.count }
     var lastCookedAt: Date? { cookedDates.max() }
@@ -160,7 +185,7 @@ extension Recipe {
     var cardFacts: String {
         var parts: [String] = []
         if protein > 0 { parts.append("\(protein.cleanString) g proteína") }
-        if totalMinutes > 0 { parts.append(Format.minutes(totalMinutes)) }
+        if let timeText { parts.append(timeText) }
         return parts.isEmpty ? category.title : parts.joined(separator: " · ")
     }
 
@@ -168,9 +193,22 @@ extension Recipe {
         var parts: [String] = []
         if calories > 0 { parts.append("\(Int(calories.rounded())) kcal") }
         if protein > 0 { parts.append("\(protein.cleanString) g prot.") }
-        if totalMinutes > 0 { parts.append(Format.minutes(totalMinutes)) }
+        if let timeText { parts.append(timeText) }
         return parts.isEmpty ? category.title : parts.joined(separator: " · ")
     }
+
+    /// "10 min", "10 min + 24 h" ou só "24 h" (a espera conta à parte do tempo ativo).
+    var timeText: String? {
+        switch (totalMinutes > 0, waitMinutes > 0) {
+        case (true, true): "\(Format.minutes(totalMinutes)) + \(Format.minutes(waitMinutes))"
+        case (true, false): Format.minutes(totalMinutes)
+        case (false, true): Format.minutes(waitMinutes)
+        case (false, false): nil
+        }
+    }
+
+    /// "2 doses", "1 porção".
+    var servingsText: String { ServingName.count(servings, noun: servingNoun) }
 
     var sourceLink: URL? {
         let trimmed = sourceURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -182,14 +220,14 @@ extension Recipe {
         var lines: [String] = [title]
         if !summary.isEmpty { lines.append(summary) }
         lines.append("")
-        lines.append("Ingredientes (\(Format.servings(servings))):")
+        lines.append("Ingredientes (\(servingsText)):")
         lines.append(contentsOf: ingredients.map { "• \($0.displayText())" })
         lines.append("")
         lines.append("Preparação:")
         lines.append(contentsOf: steps.enumerated().map { "\($0.offset + 1). \($0.element.text)" })
         if calories > 0 || protein > 0 {
             lines.append("")
-            lines.append("Por porção: \(Int(calories.rounded())) kcal · Proteína \(protein.cleanString) g · Hidratos \(carbs.cleanString) g (açúcares \(sugars.cleanString) g) · Gordura \(fat.cleanString) g (saturada \(saturatedFat.cleanString) g)")
+            lines.append("Por \(servingNoun): \(Int(calories.rounded())) kcal · Proteína \(protein.cleanString) g · Hidratos \(carbs.cleanString) g (açúcares \(sugars.cleanString) g) · Gordura \(fat.cleanString) g (saturada \(saturatedFat.cleanString) g)")
         }
         if let link = sourceLink {
             lines.append("")
@@ -227,5 +265,56 @@ nonisolated extension Ingredient {
             return "\(amount) \(name)"
         }
         return unit.isEmpty ? name : "\(name) \(unit)"
+    }
+}
+
+/// Onde a receita fica à espera depois de preparada.
+nonisolated enum WaitKind: String, CaseIterable, Identifiable, Codable, Sendable {
+    case freezer, fridge, rest
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .freezer: "Congelador"
+        case .fridge: "Frigorífico"
+        case .rest: "Repouso"
+        }
+    }
+
+    /// "24 h no congelador".
+    func phrase(_ minutes: Int) -> String {
+        switch self {
+        case .freezer: "\(Format.minutes(minutes)) no congelador"
+        case .fridge: "\(Format.minutes(minutes)) no frigorífico"
+        case .rest: "\(Format.minutes(minutes)) de repouso"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .freezer: "snowflake"
+        case .fridge: "refrigerator"
+        case .rest: "hourglass"
+        }
+    }
+}
+
+/// Nome das porções de uma receita: "porção" por omissão, ou outro escolhido (dose, fatia…).
+nonisolated enum ServingName {
+    static let presets = ["porção", "dose", "unidade", "fatia"]
+
+    static func noun(_ raw: String) -> String {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return name.isEmpty ? "porção" : name
+    }
+
+    /// "1 dose", "2 doses", "3 porções".
+    static func count(_ count: Int, noun: String) -> String {
+        "\(count) \(plural(noun, count: count))"
+    }
+
+    static func plural(_ noun: String, count: Int) -> String {
+        count == 1 ? noun : FoodPortion.pluralize(noun, amount: Double(count))
     }
 }
