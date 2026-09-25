@@ -49,8 +49,6 @@ enum FoodLibrary {
         entry("Queijo cottage", .dairy, kcal: 98, fat: 4.3, sat: 1.7, carbs: 3.4, sugars: 2.7, fiber: 0, protein: 11, salt: 0.9),
         entry("Mozzarella light", .dairy, kcal: 165, fat: 9, sat: 6, carbs: 1.5, sugars: 1, fiber: 0, protein: 20, salt: 0.8),
         entry("Leite magro", .dairy, base: .milliliters, kcal: 34, fat: 0.1, sat: 0.1, carbs: 4.9, sugars: 4.9, fiber: 0, protein: 3.4, salt: 0.1),
-        entry("Iogurte Natural +Proteínas", .dairy, brand: "Hacendado", unit: 120, kcal: 52, fat: 0.5, sat: 0.1, carbs: 3.1, sugars: 3.1, fiber: 0, protein: 10, salt: 0.1),
-        entry("Leite Proteína", .dairy, brand: "Mimosa", base: .milliliters, kcal: 59, fat: 0.2, sat: 0.1, carbs: 4.4, sugars: 4.4, fiber: 0, protein: 10, salt: 0.11),
         entry("Bebida de amêndoa sem açúcar", .dairy, base: .milliliters, kcal: 13, fat: 1.1, sat: 0.1, carbs: 0, sugars: 0, fiber: 0.3, protein: 0.4, salt: 0.13),
 
         // Cereais, pão e tubérculos
@@ -61,8 +59,6 @@ enum FoodLibrary {
         entry("Tortilha de trigo integral", .grains, unit: 60, kcal: 300, fat: 7, sat: 2.5, carbs: 47, sugars: 2.5, fiber: 6, protein: 9, salt: 1.2),
         entry("Batata-doce", .grains, unit: 200, kcal: 86, fat: 0.1, sat: 0, carbs: 20, sugars: 4.2, fiber: 3, protein: 1.6, salt: 0.14),
         entry("Amido de milho", .grains, kcal: 381, fat: 0.1, sat: 0, carbs: 91, sugars: 0, fiber: 0.9, protein: 0.3, salt: 0.02),
-        entry("Lotus Biscoff", .grains, brand: "Lotus", unit: 8, portions: [("bolacha", 8)], kcal: 484, fat: 19, sat: 8.1, carbs: 72.6, sugars: 38.1, fiber: 1.3, protein: 4.9, salt: 0.94),
-        entry("Oreo sem recheio", .grains, brand: "Oreo", kcal: 477, fat: 19, sat: 5.2, carbs: 69, sugars: 38, fiber: 3, protein: 5.2, salt: 0.74),
 
         // Fruta
         entry("Banana", .fruit, unit: 120, kcal: 89, fat: 0.3, sat: 0.1, carbs: 20, sugars: 12.2, fiber: 2.6, protein: 1.1, salt: 0),
@@ -72,7 +68,6 @@ enum FoodLibrary {
         entry("Frutos vermelhos congelados", .fruit, kcal: 45, fat: 0.3, sat: 0, carbs: 8, sugars: 6, fiber: 4, protein: 1, salt: 0),
         entry("Manga", .fruit, kcal: 60, fat: 0.4, sat: 0.1, carbs: 13.7, sugars: 13.7, fiber: 1.6, protein: 0.8, salt: 0),
         entry("Tâmaras sem caroço", .fruit, unit: 8, kcal: 282, fat: 0.4, sat: 0, carbs: 64, sugars: 63, fiber: 8, protein: 2.5, salt: 0),
-        entry("Melão", .fruit, kcal: 34, fat: 0.1, sat: 0, carbs: 8, sugars: 8, fiber: 0.8, protein: 0.5, salt: 0.03),
         entry("Limão", .fruit, unit: 80, kcal: 29, fat: 0.3, sat: 0, carbs: 3, sugars: 2.5, fiber: 2.8, protein: 1.1, salt: 0),
 
         // Legumes e verduras
@@ -89,18 +84,15 @@ enum FoodLibrary {
         // Gorduras, frutos secos e sementes
         entry("Azeite", .fats, kcal: 884, fat: 100, sat: 14, carbs: 0, sugars: 0, fiber: 0, protein: 0, salt: 0),
         entry("Amêndoas", .fats, kcal: 579, fat: 50, sat: 3.8, carbs: 9.5, sugars: 4.4, fiber: 12.5, protein: 21, salt: 0),
-        entry("Avelãs", .fats, kcal: 646, fat: 61, sat: 4.5, carbs: 7, sugars: 4.3, fiber: 9.7, protein: 15, salt: 0),
         entry("Nozes", .fats, kcal: 654, fat: 65, sat: 6.1, carbs: 7, sugars: 2.6, fiber: 6.7, protein: 15, salt: 0),
         entry("Manteiga de amendoim", .fats, kcal: 600, fat: 50, sat: 8, carbs: 12, sugars: 5, fiber: 6, protein: 25, salt: 0),
         entry("Sementes de chia", .fats, kcal: 486, fat: 31, sat: 3.3, carbs: 7.7, sugars: 0, fiber: 34, protein: 17, salt: 0.04),
         entry("Sementes de sésamo", .fats, kcal: 573, fat: 50, sat: 7, carbs: 12, sugars: 0.3, fiber: 12, protein: 18, salt: 0.03),
         entry("Chocolate negro 85%", .fats, kcal: 600, fat: 50, sat: 30, carbs: 19, sugars: 13, fiber: 13, protein: 11, salt: 0.02),
-        entry("Chocolate Negro 70%", .fats, brand: "Continente", kcal: 550, fat: 43, sat: 26, carbs: 25, sugars: 2, fiber: 29, protein: 10, salt: 0),
         entry("Cacau magro em pó", .fats, brand: "Continente", spoons: (5.3, 1.8), kcal: 327, fat: 11, sat: 7, carbs: 16, sugars: 2, fiber: 34, protein: 24, salt: 0.1),
 
         // Suplementos
         entry("Proteína whey de baunilha", .supplements, unit: 30, kcal: 380, fat: 6, sat: 3.5, carbs: 8, sugars: 4, fiber: 0, protein: 75, salt: 0.5),
-        entry("Select Protein Powder Gourmet Vanilla", .supplements, brand: "PEScience", unit: 30, portions: [("scoop", 30)], kcal: 387, fat: 4.8, sat: 3.2, carbs: 8.1, sugars: 4.8, fiber: 3.2, protein: 77.4, salt: 1.85),
         entry("Proteína whey de chocolate", .supplements, unit: 30, kcal: 375, fat: 6, sat: 3.5, carbs: 10, sugars: 5, fiber: 2, protein: 72, salt: 0.6),
 
         // Temperos, molhos e doces
@@ -109,17 +101,12 @@ enum FoodLibrary {
         entry("Gengibre ralado", .condiments, kcal: 80, fat: 0.8, sat: 0.2, carbs: 18, sugars: 1.7, fiber: 2, protein: 1.8, salt: 0.03),
         entry("Canela", .condiments, kcal: 247, fat: 1.2, sat: 0.3, carbs: 27, sugars: 2, fiber: 53, protein: 4, salt: 0.03),
         entry("Adoçante", .condiments, kcal: 0, fat: 0, sat: 0, carbs: 0, sugars: 0, fiber: 0, protein: 0, salt: 0),
-        entry("Adoçante líquido (sucralose)", .condiments, base: .milliliters, kcal: 0, fat: 0, sat: 0, carbs: 0, sugars: 0, fiber: 0, protein: 0, salt: 0),
-        entry("Stevia + Eritritol 1:1", .condiments, brand: "Castello since 1907", kcal: 0, fat: 0, sat: 0, carbs: 99.7, sugars: 0, fiber: 0, protein: 0, salt: 0),
-        entry("Aroma de baunilha", .condiments, base: .milliliters, spoons: (15, 5), kcal: 164, fat: 0, sat: 0, carbs: 41, sugars: 0, fiber: 0, protein: 0, salt: 0),
         entry("Sal", .condiments, kcal: 0, fat: 0, sat: 0, carbs: 0, sugars: 0, fiber: 0, protein: 0, salt: 100),
         entry("Pimenta preta", .condiments, kcal: 251, fat: 3.3, sat: 1.4, carbs: 39, sugars: 0.6, fiber: 25, protein: 10, salt: 0.05),
         entry("Orégãos secos", .condiments, kcal: 265, fat: 4.3, sat: 1.6, carbs: 26, sugars: 4, fiber: 42, protein: 9, salt: 0.06),
 
         // Outros
         entry("Fermento em pó", .other, spoons: (12, 4), kcal: 155, fat: 0.4, sat: 0.3, carbs: 61.5, sugars: 0.1, fiber: 0, protein: 0.4, salt: 0.1),
-        entry("Goma xantana", .other, kcal: 180, fat: 0, sat: 0, carbs: 1.5, sugars: 0, fiber: 79.6, protein: 0, salt: 0),
-        entry("Água", .other, base: .milliliters, kcal: 0, fat: 0, sat: 0, carbs: 0, sugars: 0, fiber: 0, protein: 0, salt: 0),
     ]
 
     /// Insere os alimentos de origem que ainda não existem (compara pelo nome).
@@ -161,11 +148,11 @@ enum DataMigration {
         if version < 5 { migrateToV5(context) }
     }
 
-    /// Versão 5: receitas base (gelados da Ninja CREAMi e Cookie Dough Cake).
-    /// Só entram as que ainda não existem, com os alimentos de que precisam e que ainda não existam.
+    /// Versão 5: conteúdo de origem (gelados da Ninja CREAMi e Cookie Dough Cake).
+    /// Só entram as receitas que ainda não existem, com os alimentos de que precisam e que ainda não existam.
     @MainActor
     static func migrateToV5(_ context: ModelContext) {
-        SampleData.insertBase(into: context)
+        BaseContent.insertMissingRecipes(into: context)
     }
 
     /// Versão 4: marca como exemplo as receitas criadas pela app (identificadas pelo título).

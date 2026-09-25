@@ -101,15 +101,13 @@ struct SettingsView: View {
 
                 Section {
                     Button("Repor alimentos de origem", systemImage: "basket") {
-                        let before = foods.count
-                        FoodLibrary.insertMissingDefaults(in: context)
-                        let added = ((try? context.fetchCount(FetchDescriptor<Food>())) ?? before) - before
+                        let added = BaseContent.insertMissingFoods(into: context)
                         message = added == 0
                             ? "A biblioteca já tem todos os alimentos de origem."
                             : "Foram adicionados \(added) alimentos à biblioteca."
                     }
                 } footer: {
-                    Text("Os alimentos de origem têm valores médios. Podes editá-los com os valores do rótulo das marcas que usas.")
+                    Text("Volta a pôr os alimentos que vêm com a app (com as imagens) que tenhas apagado. Os que já tens ficam como estão.")
                 }
 
                 signingSection

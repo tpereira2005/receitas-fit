@@ -106,9 +106,9 @@ struct RootView: View {
             didSeedSamples = true
             let count = (try? context.fetchCount(FetchDescriptor<Recipe>())) ?? 0
             if count == 0 {
-                // Instalação nova: biblioteca de alimentos completa e as receitas base.
-                FoodLibrary.insertMissingDefaults(in: context)
-                SampleData.insertBase(into: context)
+                // Instalação nova: os alimentos e as receitas de origem, com imagens.
+                BaseContent.insertMissingFoods(into: context)
+                BaseContent.insertMissingRecipes(into: context)
             }
         }
         if dataVersion < DataMigration.currentVersion {
