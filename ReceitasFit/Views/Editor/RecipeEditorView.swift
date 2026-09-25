@@ -354,9 +354,8 @@ struct RecipeEditorView: View {
                 .padding(.vertical, 4)
             }
 
-            // Primeiro as etiquetas que já usas (as mais usadas primeiro), depois as sugeridas.
-            let used = TagLibrary.counts(in: allRecipes).map(\.tag)
-            let suggestions = (used + RecipeDraft.suggestedTags.filter { !used.contains($0) })
+            // Primeiro as etiquetas que já usas (as mais usadas primeiro), depois as da lista das Definições.
+            let suggestions = TagLibrary.all(in: allRecipes).map(\.tag)
                 .filter { !draft.tags.contains($0) }
             if !suggestions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {

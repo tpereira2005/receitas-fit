@@ -2,8 +2,6 @@ import Foundation
 
 /// Cópia editável de uma receita. Só é aplicada ao modelo quando o utilizador carrega em Guardar.
 struct RecipeDraft: Equatable {
-    static let suggestedTags = ["Alta proteína", "Ninja CREAMi", "Low carb", "Meal prep", "Rápida", "Pré-treino", "Pós-treino"]
-
     var title = ""
     var summary = ""
     var category: RecipeCategory = .lunch

@@ -66,6 +66,33 @@ struct BrowseTests {
         #expect(a.tags == ["Meal prep"] && b.tags.isEmpty && c.tags.isEmpty)
     }
 
+    @Test func tagCatalogKeepsOriginalsAndCreatedTags() {
+        UserDefaults.standard.removeObject(forKey: TagLibrary.catalogKey)
+        defer { UserDefaults.standard.removeObject(forKey: TagLibrary.catalogKey) }
+        let a = recipe("A", tags: ["Meal prep", "Verão"])
+
+        // As etiquetas de origem aparecem mesmo sem receitas, depois das usadas.
+        let all = TagLibrary.all(in: [a])
+        #expect(all.prefix(2).map(\.tag).sorted() == ["Meal prep", "Verão"])
+        #expect(all.contains { $0.tag == "Low carb" && $0.count == 0 })
+        #expect(all.filter { $0.tag == "Meal prep" }.count == 1)
+
+        // Criar, sem repetir as que já existem.
+        #expect(TagLibrary.create("Jantar rápido", in: [a]))
+        #expect(!TagLibrary.create("verão", in: [a]))
+        #expect(TagLibrary.all(in: [a]).contains { $0.tag == "Jantar rápido" })
+
+        // Editar e apagar uma de origem.
+        TagLibrary.rename("Low carb", to: "Poucos hidratos", in: [a])
+        TagLibrary.delete("Pré-treino", in: [a])
+        let tags = TagLibrary.all(in: [a]).map(\.tag)
+        #expect(tags.contains("Poucos hidratos") && !tags.contains("Low carb") && !tags.contains("Pré-treino"))
+
+        // Apagar todas deixa a lista vazia (não volta às de origem).
+        for tag in TagLibrary.catalog { TagLibrary.delete(tag, in: []) }
+        #expect(TagLibrary.catalog.isEmpty)
+    }
+
     @Test func editingASampleMakesItTheUsers() {
         let sample = recipe("Exemplo")
         sample.isSample = true

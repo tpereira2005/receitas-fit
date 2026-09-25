@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var confirmRemoveSamples = false
     @State private var showingWhatsNew = false
     @AppStorage(ExpiryReminder.enabledKey) private var expiryReminder = false
+    @AppStorage(TagLibrary.catalogKey) private var tagCatalog = ""
 
     private var appVersion: String {
         let info = Bundle.main.infoDictionary
@@ -66,7 +67,7 @@ struct SettingsView: View {
                         TagManagerView()
                     } label: {
                         LabeledContent {
-                            Text("\(TagLibrary.counts(in: recipes).count)")
+                            Text("\(TagLibrary.all(in: recipes, catalog: TagLibrary.decodeCatalog(tagCatalog)).count)")
                         } label: {
                             Label("Etiquetas", systemImage: "tag")
                         }

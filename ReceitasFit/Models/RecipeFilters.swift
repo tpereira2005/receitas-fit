@@ -145,7 +145,51 @@ enum RecentSearches {
 
 /// Operações sobre as etiquetas de todas as receitas (gestão nas Definições).
 enum TagLibrary {
-    /// Etiquetas em uso, com o número de receitas, das mais usadas para as menos.
+    /// Chave da lista de etiquetas guardadas (JSON). Vazia = ainda só as etiquetas de origem.
+    static let catalogKey = "tagCatalog"
+
+    /// Etiquetas que vêm com a app. Podem ser editadas ou apagadas como as outras.
+    static let originals = ["Alta proteína", "Ninja CREAMi", "Low carb", "Meal prep", "Rápida", "Pré-treino", "Pós-treino"]
+
+    /// Etiquetas guardadas na lista, mesmo sem receitas: as de origem que não foram apagadas e as criadas.
+    static var catalog: [String] {
+        get { decodeCatalog(UserDefaults.standard.string(forKey: catalogKey) ?? "") }
+        set {
+            var seen = Set<String>()
+            let clean = newValue.map(\.trimmed).filter { !$0.isEmpty && seen.insert($0).inserted }
+            let data = (try? JSONEncoder().encode(clean)) ?? Data()
+            UserDefaults.standard.set(String(decoding: data, as: UTF8.self), forKey: catalogKey)
+        }
+    }
+
+    static func decodeCatalog(_ raw: String) -> [String] {
+        guard !raw.isEmpty else { return originals }
+        return (try? JSONDecoder().decode([String].self, from: Data(raw.utf8))) ?? originals
+    }
+
+    /// Todas as etiquetas: as usadas nas receitas e as da lista (com 0 receitas), das mais usadas para as menos.
+    static func all(in recipes: [Recipe], catalog: [String] = catalog) -> [(tag: String, count: Int)] {
+        let used = counts(in: recipes)
+        let usedTags = Set(used.map(\.tag))
+        let unused = catalog
+            .filter { !usedTags.contains($0) }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            .map { (tag: $0, count: 0) }
+        return used + unused
+    }
+
+    /// Acrescenta uma etiqueta nova à lista. Devolve `false` se já existir (em receitas ou na lista).
+    @discardableResult
+    static func create(_ name: String, in recipes: [Recipe]) -> Bool {
+        let tag = name.trimmed
+        guard !tag.isEmpty, !all(in: recipes).contains(where: { $0.tag.caseInsensitiveCompare(tag) == .orderedSame }) else {
+            return false
+        }
+        catalog.append(tag)
+        return true
+    }
+
+    /// Etiquetas usadas nas receitas, com o número de receitas, das mais usadas para as menos.
     static func counts(in recipes: [Recipe]) -> [(tag: String, count: Int)] {
         var counts: [String: Int] = [:]
         for recipe in recipes {
@@ -161,6 +205,7 @@ enum TagLibrary {
     static func rename(_ tag: String, to newName: String, in recipes: [Recipe]) -> Int {
         let name = newName.trimmed
         guard !name.isEmpty, name != tag else { return 0 }
+        catalog = catalog.map { $0 == tag ? name : $0 }
         var changed = 0
         for recipe in recipes where recipe.tags.contains(tag) {
             var tags = recipe.tags.map { $0 == tag ? name : $0 }
@@ -172,9 +217,10 @@ enum TagLibrary {
         return changed
     }
 
-    /// Tira a etiqueta de todas as receitas (as receitas não são apagadas).
+    /// Apaga a etiqueta da lista e tira-a de todas as receitas (as receitas não são apagadas).
     @discardableResult
     static func delete(_ tag: String, in recipes: [Recipe]) -> Int {
+        catalog.removeAll { $0 == tag }
         var changed = 0
         for recipe in recipes where recipe.tags.contains(tag) {
             recipe.tags.removeAll { $0 == tag }
