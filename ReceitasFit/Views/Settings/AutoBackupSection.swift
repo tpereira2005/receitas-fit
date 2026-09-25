@@ -8,7 +8,6 @@ import SwiftData
 struct AutoBackupSection: View {
     @Environment(\.modelContext) private var context
     let onChooseFolder: () -> Void
-    let onDisable: () -> Void
 
     private let backup = AutoBackup.shared
     /// Mostra "Cópia guardada" no botão durante uns segundos depois de uma cópia manual.
@@ -49,10 +48,6 @@ struct AutoBackupSection: View {
                 backupNowButton
                 Button(action: onChooseFolder) {
                     Label("Mudar de pasta", systemImage: "folder")
-                }
-                Button(role: .destructive, action: onDisable) {
-                    Label("Desativar cópias automáticas", systemImage: "xmark.circle")
-                        .foregroundStyle(.red)
                 }
             }
         } footer: {
@@ -163,6 +158,6 @@ struct AutoBackupSection: View {
     }
 
     private var footer: some View {
-        Text("Uma cópia por dia, quando abres ou sais da app, e só se algo mudou. Ficam as \(AutoBackup.keepCount) mais recentes, com as fotografias; os outros ficheiros da pasta nunca são tocados. Uma pasta no iCloud Drive mantém-nas fora do iPhone.")
+        Text("Uma cópia por dia, com as fotografias, só se algo mudou. Ficam as \(AutoBackup.keepCount) mais recentes. Escolhe uma pasta no iCloud Drive para as guardar fora do iPhone.")
     }
 }

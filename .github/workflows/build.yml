@@ -252,15 +252,19 @@ jobs:
           shot 31-novidades -screenshotWhatsNew YES
           shot 32-expira -screenshotExpiryDays 1
           shot 12-rever-receitas -tab foods -screenshotOpenFood YES -screenshotFoodReview YES
-          shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready
-          shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed
-          shot 15-copias-desativadas -screenshotSettings YES -screenshotBackupState off
+          shot 13-copias-ativas -screenshotSettings YES -screenshotBackupState ready -screenshotSettingsPage copias
+          shot 14-copias-erro -screenshotSettings YES -screenshotBackupState failed -screenshotSettingsPage copias
+          shot 15-copias-desativadas -screenshotSettings YES -screenshotBackupState off -screenshotSettingsPage copias
           shot 17-alimento-medidas -tab foods -screenshotOpenFood YES -screenshotFoodPortions YES
           shot 18-editar-porcoes -tab foods -screenshotOpenFood YES -screenshotFoodPortions YES -screenshotEditFood YES
           shot 19-ler-embalagem -tab foods -screenshotScanner YES
           shot 20-rever-embalagem -tab foods -screenshotScanner YES -screenshotScannerReview YES
-          shot 21-gemini-ativo -screenshotSettings YES -screenshotGeminiState on
-          shot 22-gemini-sem-chave -screenshotSettings YES -screenshotGeminiState off
+          shot 21-gemini-ativo -screenshotSettings YES -screenshotGeminiState on -screenshotSettingsPage gemini
+          shot 22-gemini-sem-chave -screenshotSettings YES -screenshotGeminiState off -screenshotSettingsPage gemini
+          shot 33-definicoes -screenshotSettings YES -screenshotBackupState ready -screenshotGeminiState on
+          shot 35-definicoes-expira -screenshotSettings YES -screenshotBackupState ready -screenshotExpiryDays 1
+          shot 36-sidestore -screenshotSettings YES -screenshotSettingsPage sidestore -screenshotExpiryDays 5
+          shot 37-etiquetas -screenshotSettings YES -screenshotSettingsPage etiquetas
           shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
           shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
           shot 26-partilhar-stories -screenshotOpenFirst YES -screenshotShare YES -screenshotShareFormat story
@@ -268,8 +272,9 @@ jobs:
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES
           shot 11-receita-nutricao-escuro -screenshotOpenFirst YES -screenshotDetailScroll YES
-          shot 16-copias-escuro -screenshotSettings YES -screenshotBackupState ready
-          shot 23-gemini-escuro -screenshotSettings YES -screenshotGeminiState on
+          shot 16-copias-escuro -screenshotSettings YES -screenshotBackupState ready -screenshotSettingsPage copias
+          shot 23-gemini-escuro -screenshotSettings YES -screenshotGeminiState on -screenshotSettingsPage gemini
+          shot 34-definicoes-escuro -screenshotSettings YES -screenshotBackupState ready -screenshotGeminiState on
 
       - uses: actions/upload-artifact@v5
         with:

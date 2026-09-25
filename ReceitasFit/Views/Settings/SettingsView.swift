@@ -1,129 +1,73 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
+/// Páginas das Definições.
+enum SettingsPage: String, Hashable {
+    case backups = "copias"
+    case packageReading = "gemini"
+    case tags = "etiquetas"
+    case sideStore = "sidestore"
+}
+
+/// Página principal das Definições: um resumo da app e uma linha por área, com o estado à direita.
+/// O detalhe de cada área fica numa página própria.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
     @Query private var recipes: [Recipe]
     @Query private var foods: [Food]
-
-    @State private var exportDocument: BackupDocument?
-    @State private var isExporting = false
-    @State private var isImporting = false
-    @State private var isChoosingFolder = false
-    @State private var confirmDisableAuto = false
-    private let autoBackup = AutoBackup.shared
-    @State private var message: String?
-    @State private var confirmRemoveSamples = false
-    @State private var showingWhatsNew = false
-    @AppStorage(ExpiryReminder.enabledKey) private var expiryReminder = false
     @AppStorage(TagLibrary.catalogKey) private var tagCatalog = ""
 
-    private var appVersion: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "\(version) (\(build))"
-    }
-
-    private var backupFilename: String {
-        "Receitas-\(Date.now.formatted(.iso8601.year().month().day()))"
-    }
+    /// Capturas do CI: abre logo numa das páginas.
+    @State private var path: [SettingsPage] = ScreenshotMode.string("screenshotSettingsPage")
+        .flatMap(SettingsPage.init(rawValue:)).map { [$0] } ?? []
+    @State private var geminiActive = GeminiKeySection.currentKey() != nil
+    @State private var showingWhatsNew = false
+    private let backup = AutoBackup.shared
 
     var body: some View {
-        NavigationStack {
-            ScrollViewReader { proxy in
+        NavigationStack(path: $path) {
             Form {
-                Section("Resumo") {
-                    LabeledContent("Receitas", value: "\(recipes.count)")
-                    LabeledContent("Favoritas", value: "\(recipes.filter(\.isFavorite).count)")
-                    LabeledContent("Alimentos na biblioteca", value: "\(foods.count)")
-                    LabeledContent("Com fotografia", value: "\(recipes.filter { $0.thumbnailData != nil }.count)")
+                Section {
+                    header
                 }
 
-                AutoBackupSection(
-                    onChooseFolder: { isChoosingFolder = true },
-                    onDisable: { confirmDisableAuto = true }
-                )
-
-                Section {
-                    Button("Exportar cópia de segurança", systemImage: "square.and.arrow.up", action: export)
-                        .disabled(recipes.isEmpty && foods.isEmpty)
-                    Button("Importar cópia de segurança", systemImage: "square.and.arrow.down") {
-                        isImporting = true
+                if AppSigning.isExpiringSoon {
+                    Section {
+                        expiryBanner
                     }
-                } header: {
-                    Text("Cópia de segurança")
-                } footer: {
-                    Text("Exporta um ficheiro quando quiseres, por exemplo antes de mudar de iPhone. A importação só acrescenta o que ainda não existe na app.")
                 }
 
-                GeminiKeySection()
-                    .id("gemini")
+                Section("Dados") {
+                    NavigationLink(value: SettingsPage.backups) {
+                        SettingsRow(title: "Cópias de segurança", symbol: "externaldrive.fill", color: .blue,
+                                    value: backupValue.text, valueColor: backupValue.color)
+                    }
+                    NavigationLink(value: SettingsPage.packageReading) {
+                        SettingsRow(title: "Leitura de embalagens", symbol: "sparkles", color: .purple,
+                                    value: geminiActive ? "Gemini" : "No iPhone")
+                    }
+                }
 
-                Section {
-                    NavigationLink {
-                        TagManagerView()
+                Section("Biblioteca") {
+                    NavigationLink(value: SettingsPage.tags) {
+                        SettingsRow(title: "Etiquetas", symbol: "tag.fill", color: .orange,
+                                    value: "\(TagLibrary.all(in: recipes, catalog: TagLibrary.decodeCatalog(tagCatalog)).count)")
+                    }
+                }
+
+                Section("App") {
+                    NavigationLink(value: SettingsPage.sideStore) {
+                        SettingsRow(title: "SideStore", symbol: "clock.arrow.circlepath", color: .gray,
+                                    value: sideStoreValue,
+                                    valueColor: AppSigning.isExpiringSoon ? .orange : .secondary)
+                    }
+                    Button {
+                        showingWhatsNew = true
                     } label: {
-                        LabeledContent {
-                            Text("\(TagLibrary.all(in: recipes, catalog: TagLibrary.decodeCatalog(tagCatalog)).count)")
-                        } label: {
-                            Label("Etiquetas", systemImage: "tag")
-                        }
+                        SettingsRow(title: "O que há de novo", symbol: "gift.fill", color: .pink)
+                            .foregroundStyle(.primary)
                     }
-                } header: {
-                    Text("Organização")
-                } footer: {
-                    Text("Muda o nome, junta ou apaga etiquetas em todas as receitas.")
                 }
-
-                Section {
-                    let samples = recipes.filter(\.isSample)
-                    if samples.isEmpty {
-                        Button("Adicionar receitas de exemplo", systemImage: "sparkles") {
-                            let count = SampleData.insert(into: context)
-                            message = "Foram adicionadas \(count) receitas de exemplo."
-                        }
-                    } else {
-                        Button(role: .destructive) {
-                            confirmRemoveSamples = true
-                        } label: {
-                            Label("Remover receitas de exemplo (\(samples.count))", systemImage: "trash")
-                                .foregroundStyle(.red)
-                        }
-                    }
-                } header: {
-                    Text("Receitas de exemplo")
-                } footer: {
-                    Text("As receitas de exemplo que editaste passaram a ser tuas e não são removidas.")
-                }
-
-                Section {
-                    Button("Repor alimentos de origem", systemImage: "basket") {
-                        let added = BaseContent.insertMissingFoods(into: context)
-                        message = added == 0
-                            ? "A biblioteca já tem todos os alimentos de origem."
-                            : "Foram adicionados \(added) alimentos à biblioteca."
-                    }
-                } footer: {
-                    Text("Volta a pôr os alimentos que vêm com a app (com as imagens) que tenhas apagado. Os que já tens ficam como estão.")
-                }
-
-                signingSection
-
-                Section("Sobre") {
-                    LabeledContent("Versão", value: appVersion)
-                    Button("O que há de novo", systemImage: "sparkles") { showingWhatsNew = true }
-                    LabeledContent("Feita com", value: "SwiftUI · SwiftData")
-                }
-            }
-            .task {
-                // Usado apenas nas capturas automáticas do CI.
-                guard ScreenshotMode.string("screenshotGeminiState") != nil else { return }
-                try? await Task.sleep(for: .milliseconds(600))
-                proxy.scrollTo("gemini", anchor: .top)
-            }
             }
             .navigationTitle("Definições")
             .navigationBarTitleDisplayMode(.inline)
@@ -132,143 +76,100 @@ struct SettingsView: View {
                     Button("OK", systemImage: "checkmark") { dismiss() }
                 }
             }
-            .fileExporter(isPresented: $isExporting, document: exportDocument, contentType: .json, defaultFilename: backupFilename) { result in
-                if case .success = result {
-                    message = "Cópia de segurança exportada."
+            .navigationDestination(for: SettingsPage.self) { page in
+                switch page {
+                case .backups: BackupSettingsView()
+                case .packageReading: PackageReadingSettingsView()
+                case .tags: TagManagerView()
+                case .sideStore: SideStoreSettingsView()
                 }
             }
-            .fileImporter(isPresented: $isImporting, allowedContentTypes: [.json]) { result in
-                handleImport(result)
-            }
-            .background {
-                // Um segundo seletor no mesmo modificador não abre; fica numa vista à parte.
-                Color.clear.fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder]) { result in
-                    handleFolder(result)
-                }
-            }
-            .confirmationDialog("Desativar as cópias automáticas?", isPresented: $confirmDisableAuto, titleVisibility: .visible) {
-                Button("Desativar", role: .destructive) {
-                    withAnimation(.snappy) { autoBackup.disable() }
-                }
-            } message: {
-                Text("As cópias que já estão na pasta não são apagadas.")
-            }
+            // Ao voltar da página da leitura de embalagens, a chave pode ter mudado.
+            .onAppear { geminiActive = GeminiKeySection.currentKey() != nil }
             .sheet(isPresented: $showingWhatsNew) {
                 WhatsNewView()
             }
-            .confirmationDialog("Remover as receitas de exemplo?", isPresented: $confirmRemoveSamples, titleVisibility: .visible) {
-                Button("Remover", role: .destructive, action: removeSamples)
-            } message: {
-                Text("São apagadas as receitas de exemplo que nunca editaste. As tuas receitas e os alimentos ficam como estão.")
-            }
-            .alert(
-                "Receitas",
-                isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })
-            ) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(message ?? "")
-            }
         }
     }
 
-    // MARK: - Cópias automáticas
+    // MARK: - Cabeçalho
 
-    // MARK: - SideStore
+    private var header: some View {
+        HStack(spacing: 16) {
+            Image("app.mark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .strokeBorder(.primary.opacity(0.08))
+                }
+                .accessibilityHidden(true)
 
-    @ViewBuilder
-    private var signingSection: some View {
-        Section {
-            if let expiration = AppSigning.expirationDate {
-                LabeledContent("Válida até") {
-                    Text("\(expiration.formatted(date: .abbreviated, time: .omitted)) · \(AppSigning.expiryText)")
-                        .foregroundStyle(AppSigning.isExpiringSoon ? Color.orange : Color.secondary)
-                }
-                Toggle(isOn: Binding(
-                    get: { expiryReminder },
-                    set: { isOn in
-                        if isOn {
-                            Task {
-                                if !(await ExpiryReminder.enable()) {
-                                    message = "Para receberes o aviso, permite as notificações da app Receitas nos Ajustes do iPhone."
-                                }
-                            }
-                        } else {
-                            ExpiryReminder.disable()
-                        }
-                    }
-                )) {
-                    Label("Avisar na véspera", systemImage: "bell.badge")
-                }
-                Button("Abrir SideStore", systemImage: "arrow.up.forward.app") { AppSigning.openSideStore() }
-            } else {
-                LabeledContent("Válida até", value: "sem data (instalação de desenvolvimento)")
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Receitas")
+                    .font(.title2.weight(.bold))
+                Text(summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Versão \(appVersion)")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
-        } header: {
-            Text("SideStore")
-        } footer: {
-            Text("Com uma conta gratuita, a app tem de ser renovada no SideStore a cada 7 dias. Se expirar, deixa de abrir até a renovares, mas as receitas continuam guardadas.")
         }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 
-    private func removeSamples() {
-        let samples = recipes.filter(\.isSample)
-        for recipe in samples { context.delete(recipe) }
-        try? context.save()
-        Haptics.warning()
-        message = samples.count == 1 ? "Foi removida 1 receita de exemplo." : "Foram removidas \(samples.count) receitas de exemplo."
+    private var summary: String {
+        let favorites = recipes.filter(\.isFavorite).count
+        var parts = [Format.recipes(recipes.count)]
+        if favorites > 0 { parts.append(favorites == 1 ? "1 favorita" : "\(favorites) favoritas") }
+        parts.append(foods.count == 1 ? "1 alimento" : "\(foods.count) alimentos")
+        return parts.joined(separator: " · ")
     }
 
-    private func handleFolder(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            do {
-                try autoBackup.setFolder(url)
-                // O cartão de estado mostra o resultado da primeira cópia; não é preciso um alerta.
-                Task {
-                    if await autoBackup.run(context: context, force: true) {
-                        Haptics.success()
-                    } else {
-                        Haptics.warning()
-                    }
-                }
-            } catch {
-                message = "Não foi possível usar esta pasta: \(error.localizedDescription)"
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    // MARK: - Aviso do SideStore
+
+    private var expiryBanner: some View {
+        HStack(spacing: 14) {
+            SettingsIcon(symbol: "exclamationmark.triangle.fill", color: .orange, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Renova a app no SideStore")
+                    .font(.headline)
+                Text("A assinatura expira \(AppSigning.expiryText).")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-        case .failure(let error):
-            message = error.localizedDescription
+            Spacer(minLength: 8)
+            Button("Abrir") { AppSigning.openSideStore() }
+                .buttonStyle(.glassProminent)
+                .tint(.orange)
         }
+        .padding(.vertical, 4)
     }
 
-    private func export() {
-        do {
-            exportDocument = BackupDocument(data: try RecipeBackup.encode(recipes: recipes, foods: foods))
-            isExporting = true
-        } catch {
-            message = "Não foi possível exportar: \(error.localizedDescription)"
-        }
+    // MARK: - Estados
+
+    private var backupValue: (text: String, color: Color) {
+        guard backup.isEnabled, backup.folderName != nil else { return ("Desativadas", .secondary) }
+        if backup.isRunning { return ("A copiar…", .secondary) }
+        if backup.lastError != nil { return ("Com erro", .orange) }
+        return ("Ativas", .secondary)
     }
 
-    private func handleImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            let hasAccess = url.startAccessingSecurityScopedResource()
-            defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let data = try Data(contentsOf: url)
-                let restored = try RecipeBackup.restore(from: data, into: context)
-                if restored.recipes == 0 && restored.foods == 0 {
-                    message = "Tudo o que está neste ficheiro já existe na app."
-                } else {
-                    let recipesText = restored.recipes == 1 ? "1 receita" : "\(restored.recipes) receitas"
-                    let foodsText = restored.foods == 1 ? "1 alimento" : "\(restored.foods) alimentos"
-                    message = "Importados: \(recipesText) e \(foodsText)."
-                }
-            } catch {
-                message = "Este ficheiro não parece ser uma cópia de segurança válida."
-            }
-        case .failure(let error):
-            message = error.localizedDescription
+    private var sideStoreValue: String {
+        switch AppSigning.daysLeft {
+        case nil: "Sem data"
+        case 0?: "Expira hoje"
+        case 1?: "Expira amanhã"
+        case let days?: "Faltam \(days) dias"
         }
     }
 }

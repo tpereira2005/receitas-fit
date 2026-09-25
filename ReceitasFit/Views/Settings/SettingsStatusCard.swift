@@ -43,3 +43,44 @@ extension SettingsStatusCard where Subtitle == Text {
         self.init(symbol: symbol, color: color, title: title, isAnimating: isAnimating) { Text(subtitle) }
     }
 }
+
+/// Linha da página principal das Definições, como nos Ajustes do iPhone:
+/// ícone num quadrado colorido, título e o estado atual à direita.
+struct SettingsRow: View {
+    let title: String
+    let symbol: String
+    let color: Color
+    var value: String?
+    var valueColor: Color = .secondary
+
+    var body: some View {
+        HStack(spacing: 14) {
+            SettingsIcon(symbol: symbol, color: color)
+            Text(title)
+            Spacer(minLength: 8)
+            if let value {
+                Text(value)
+                    .foregroundStyle(valueColor)
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Ícone branco num quadrado de cantos arredondados, com o gradiente de uma cor.
+struct SettingsIcon: View {
+    let symbol: String
+    let color: Color
+    var size: CGFloat = 30
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.5, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: size * 0.27, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}

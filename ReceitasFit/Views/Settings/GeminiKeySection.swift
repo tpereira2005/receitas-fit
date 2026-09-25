@@ -9,7 +9,7 @@ struct GeminiKeySection: View {
         case idle, checking, verified, failed(GeminiReader.ReadError)
     }
 
-    @State private var savedKey = Self.initialKey()
+    @State private var savedKey = Self.currentKey()
     @State private var draftKey = ""
     @State private var check = Check.idle
     @State private var confirmRemove = false
@@ -18,8 +18,6 @@ struct GeminiKeySection: View {
     var body: some View {
         Section {
             statusCard
-        } header: {
-            Text("Leitura de embalagens")
         }
         .listSectionSpacing(.compact)
 
@@ -73,7 +71,7 @@ struct GeminiKeySection: View {
                 }
             }
         } footer: {
-            Text("As fotografias só são enviadas ao Gemini (Google) quando tocas em “Ler”. No nível gratuito, a Google pode usá-las para melhorar os seus produtos. A chave fica no Porta-chaves deste iPhone.")
+            Text("As fotografias só vão para o Gemini (Google) quando tocas em “Ler”. No nível gratuito, a Google pode usá-las para melhorar os seus produtos.")
         }
         .animation(.snappy, value: savedKey)
         .animation(.snappy, value: check)
@@ -114,7 +112,8 @@ struct GeminiKeySection: View {
         }
     }
 
-    private static func initialKey() -> String? {
+    /// Chave guardada no Porta-chaves (ou a simulada nas capturas do CI).
+    static func currentKey() -> String? {
         // Capturas automáticas do CI: simula uma chave guardada.
         if ScreenshotMode.string("screenshotGeminiState") == "on" { return "AIzaSyExemploDeChave0x7Qk" }
         if ScreenshotMode.string("screenshotGeminiState") == "off" { return nil }

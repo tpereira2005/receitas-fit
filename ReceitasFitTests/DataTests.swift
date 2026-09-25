@@ -96,14 +96,8 @@ struct DataTests {
         #expect(again.recipes == 0 && again.foods == 0)
     }
 
-    @Test func samplesAreMarkedAndMigrationFindsOldOnes() throws {
+    @Test func migrationMarksOldSamples() throws {
         let context = ModelContext(try memoryContainer())
-        SampleData.insert(into: context)
-        let samples = try context.fetch(FetchDescriptor<Recipe>())
-        #expect(!samples.isEmpty)
-        let allMarked = samples.allSatisfy { $0.isSample }
-        #expect(allMarked)
-
         let old = Recipe(title: "Bowl de frango teriyaki")
         let mine = Recipe(title: "A minha receita")
         context.insert(old)
@@ -163,14 +157,5 @@ struct DataTests {
         #expect(names.contains("Goma xantana"))
         // O Cookie Dough Cake já existia: os alimentos só dele não são acrescentados.
         #expect(!names.contains("Select Protein Powder Gourmet Vanilla"))
-    }
-
-    /// As receitas de exemplo só trazem os alimentos de que precisam.
-    @Test func samplesInsertOnlyTheFoodsTheyUse() throws {
-        let context = ModelContext(try memoryContainer())
-        SampleData.insert(into: context)
-        let names = Set(try context.fetch(FetchDescriptor<Food>()).map(\.name))
-        #expect(names.contains("Peito de frango"))
-        #expect(!names.contains("Pescada"))
     }
 }
