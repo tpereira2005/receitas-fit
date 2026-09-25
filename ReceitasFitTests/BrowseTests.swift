@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 import Testing
 @testable import ReceitasFit
 
