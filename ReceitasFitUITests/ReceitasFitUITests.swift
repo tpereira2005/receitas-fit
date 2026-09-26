@@ -96,7 +96,9 @@ final class ReceitasFitUITests: XCTestCase {
         app.buttons["Seguinte"].tap()
         XCTAssertTrue(element(app.staticTexts, startingWith: "Passo 2 de").waitForExistence(timeout: timeout))
         app.buttons["Fechar"].tap()
-        XCTAssertTrue(cook.waitForExistence(timeout: timeout))
+        // Com um passo feito, o botão passa a dizer "Continuar no modo cozinhar".
+        let resume = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Continuar no modo cozinhar")).firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: timeout))
     }
 
     /// Apagar uma receita manda-a para "Apagadas recentemente", de onde se recupera.
@@ -114,10 +116,9 @@ final class ReceitasFitUITests: XCTestCase {
         settings.tap()
         element(app.buttons, startingWith: "Apagadas recentemente").tap()
 
-        let deleted = app.cells.firstMatch
-        XCTAssertTrue(deleted.waitForExistence(timeout: timeout))
-        deleted.swipeRight()
-        app.buttons["Recuperar"].tap()
+        XCTAssertTrue(app.navigationBars["Apagadas recentemente"].waitForExistence(timeout: timeout))
+        app.navigationBars["Apagadas recentemente"].buttons["Mais"].tap()
+        app.buttons["Recuperar tudo"].tap()
         XCTAssertTrue(app.staticTexts["Nada apagado"].waitForExistence(timeout: timeout))
     }
 }
