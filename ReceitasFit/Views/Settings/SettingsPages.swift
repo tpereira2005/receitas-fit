@@ -182,6 +182,7 @@ struct AutoBackupRestoreView: View {
                                 }
                             }
                         }
+                        .tint(.primary)
                         .disabled(working)
                     }
                 } footer: {

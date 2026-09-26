@@ -18,7 +18,7 @@ struct RecentlyDeletedView: View {
             if !recipes.isEmpty {
                 Section("Receitas") {
                     ForEach(recipes) { recipe in
-                        row(title: recipe.title, deletedAt: recipe.deletedAt) {
+                        row(title: recipe.title, deletedAt: recipe.deletedAt, feminine: true) {
                             Color.clear
                                 .frame(width: 44, height: 44)
                                 .overlay { RecipePhoto(recipe: recipe, symbolSize: 18) }
@@ -41,7 +41,7 @@ struct RecentlyDeletedView: View {
             if !foods.isEmpty {
                 Section("Alimentos") {
                     ForEach(foods) { food in
-                        row(title: food.name, deletedAt: food.deletedAt) {
+                        row(title: food.name, deletedAt: food.deletedAt, feminine: false) {
                             FoodIcon(food: food, size: 44)
                         }
                         .swipeActions(edge: .leading) {
@@ -97,14 +97,14 @@ struct RecentlyDeletedView: View {
         .animation(.snappy, value: foods.map(\.id))
     }
 
-    private func row(title: String, deletedAt: Date?, @ViewBuilder icon: () -> some View) -> some View {
+    private func row(title: String, deletedAt: Date?, feminine: Bool, @ViewBuilder icon: () -> some View) -> some View {
         HStack(spacing: 12) {
             icon()
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).lineLimit(2)
                 if let deletedAt {
                     let left = RecentlyDeleted.daysLeft(since: deletedAt)
-                    Text("Apagada \(Format.relativeDay(deletedAt)) · \(left == 1 ? "falta 1 dia" : "faltam \(left) dias")")
+                    Text("\(feminine ? "Apagada" : "Apagado") \(Format.relativeDay(deletedAt)) · \(left == 1 ? "falta 1 dia" : "faltam \(left) dias")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
