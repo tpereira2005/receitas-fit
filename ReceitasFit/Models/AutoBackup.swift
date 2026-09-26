@@ -210,10 +210,10 @@ final class AutoBackup {
                 let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
                 let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)
                 return files
-                    .filter { $0.lastPathComponent.hasPrefix(filePrefix) && $0.pathExtension == "json" }
+                    .filter { $0.lastPathComponent.hasPrefix(Self.filePrefix) && $0.pathExtension == "json" }
                     .map { url in
                         let values = try? url.resourceValues(forKeys: Set(keys))
-                        let stamp = url.deletingPathExtension().lastPathComponent.dropFirst(filePrefix.count)
+                        let stamp = url.deletingPathExtension().lastPathComponent.dropFirst(Self.filePrefix.count)
                         let date = Self.date(fromStamp: String(stamp)) ?? values?.contentModificationDate ?? .distantPast
                         return StoredBackup(name: url.lastPathComponent, date: date, size: values?.fileSize ?? 0)
                     }
