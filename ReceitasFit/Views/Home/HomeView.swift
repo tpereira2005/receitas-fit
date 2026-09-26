@@ -79,6 +79,11 @@ struct HomeView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            // Temporizadores a contar (o forno não se esquece): tocar abre a receita.
+            .safeAreaInset(edge: .bottom) {
+                ActiveTimersBar(showsRecipe: true) { router.open($0) }
+                    .animation(.snappy, value: CookingTimers.shared.timers)
+            }
             .onAppear(perform: handleScreenshotArguments)
             // Receita pedida pelo Spotlight, pelos Atalhos ou pela Siri.
             .onChange(of: router.pendingRecipeID, initial: true) { _, id in

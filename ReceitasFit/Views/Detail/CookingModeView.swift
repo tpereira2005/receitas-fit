@@ -43,9 +43,8 @@ struct CookingModeView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.snappy, value: index)
-                if !timers.timers.isEmpty {
-                    timersBar
-                }
+                ActiveTimersBar()
+                    .animation(.snappy, value: timers.timers)
                 controls
             }
             .navigationTitle(recipe.title)
@@ -105,15 +104,7 @@ struct CookingModeView: View {
                 if !durations.isEmpty {
                     FlowLayout(spacing: 10) {
                         ForEach(durations, id: \.self) { duration in
-                            Button {
-                                timers.start(duration, label: "Passo \(number) · \(duration.label)", recipeTitle: recipe.title)
-                            } label: {
-                                Label("Iniciar \(duration.label)", systemImage: "timer")
-                                    .font(.headline)
-                                    .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.glassProminent)
-                            .tint(.orange)
+                            StepTimerButton(duration: duration, stepID: step.id, stepNumber: number, recipe: recipe, large: true)
                         }
                     }
                 }
@@ -136,42 +127,6 @@ struct CookingModeView: View {
             .padding(.vertical, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    // MARK: - Temporizadores
-
-    private var timersBar: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(timers.timers) { timer in
-                        let remaining = timer.remaining(at: context.date)
-                        HStack(spacing: 10) {
-                            Image(systemName: remaining > 0 ? "timer" : "bell.fill")
-                                .foregroundStyle(remaining > 0 ? Color.orange : Color.red)
-                                .symbolEffect(.bounce, options: .repeating, isActive: remaining == 0)
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(remaining > 0 ? CookingTimers.clock(remaining) : "Terminou")
-                                    .font(.headline.monospacedDigit())
-                                Text(timer.label)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Button("Parar", systemImage: "xmark") { withAnimation { timers.cancel(timer) } }
-                                .labelStyle(.iconOnly)
-                                .buttonStyle(.glass)
-                        }
-                        .padding(.leading, 14)
-                        .padding(.trailing, 6)
-                        .padding(.vertical, 6)
-                        .glassEffect(.regular, in: .capsule)
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.bottom, 8)
-        .sensoryFeedback(.warning, trigger: timers.timers.count)
     }
 
     // MARK: - Anterior e seguinte

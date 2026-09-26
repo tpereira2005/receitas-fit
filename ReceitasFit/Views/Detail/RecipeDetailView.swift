@@ -121,6 +121,11 @@ struct RecipeDetailView: View {
         .onChange(of: recipe.servings) { _, newValue in
             servings = max(1, newValue)
         }
+        // Temporizadores desta receita a contar, sempre à vista (também fora do modo cozinhar).
+        .safeAreaInset(edge: .bottom) {
+            ActiveTimersBar(recipeID: recipe.id)
+                .animation(.snappy, value: CookingTimers.shared.timers)
+        }
         .fullScreenCover(isPresented: $cooking) {
             CookingModeView(recipe: recipe, scale: scale, completedSteps: $completedSteps,
                             startAt: ScreenshotMode.string("screenshotCookingStep").flatMap(Int.init))
@@ -416,7 +421,25 @@ struct RecipeDetailView: View {
 
     private func stepRow(number: Int, step: RecipeStep) -> some View {
         let done = completedSteps.contains(step.id)
-        return Button {
+        let durations = StepAnalysis.durations(in: step.text)
+        return VStack(alignment: .leading, spacing: 10) {
+            stepButton(number: number, step: step, done: done)
+            // Temporizadores tirados do texto ("forno durante 30 minutos" → ▶ 30 min).
+            if !durations.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(durations, id: \.self) { duration in
+                        StepTimerButton(duration: duration, stepID: step.id, stepNumber: number, recipe: recipe)
+                    }
+                }
+                .padding(.leading, 44)
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func stepButton(number: Int, step: RecipeStep, done: Bool) -> some View {
+        Button {
             withAnimation(.snappy) {
                 if done { completedSteps.remove(step.id) } else { completedSteps.insert(step.id) }
             }
@@ -441,8 +464,6 @@ struct RecipeDetailView: View {
                     .multilineTextAlignment(.leading)
                     .padding(.top, 4)
             }
-            .padding(16)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

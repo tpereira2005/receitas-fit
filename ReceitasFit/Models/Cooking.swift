@@ -118,6 +118,10 @@ final class CookingTimers {
         let id = UUID()
         let label: String
         let recipeTitle: String
+        /// Receita de onde veio (a cápsula no Início abre-a).
+        var recipeID: UUID?
+        /// Passo de onde veio, para o botão do passo mostrar a contagem.
+        var stepID: UUID?
         let end: Date
 
         func remaining(at date: Date) -> TimeInterval { max(0, end.timeIntervalSince(date)) }
@@ -125,8 +129,10 @@ final class CookingTimers {
 
     private(set) var timers: [ActiveTimer] = []
 
-    func start(_ duration: StepAnalysis.Duration, label: String, recipeTitle: String) {
-        let timer = ActiveTimer(label: label, recipeTitle: recipeTitle, end: .now.addingTimeInterval(TimeInterval(duration.seconds)))
+    func start(_ duration: StepAnalysis.Duration, label: String, recipeTitle: String,
+               recipeID: UUID? = nil, stepID: UUID? = nil) {
+        let timer = ActiveTimer(label: label, recipeTitle: recipeTitle, recipeID: recipeID, stepID: stepID,
+                                end: .now.addingTimeInterval(TimeInterval(duration.seconds)))
         timers.append(timer)
         Task { await Self.schedule(timer) }
     }
@@ -134,6 +140,11 @@ final class CookingTimers {
     func cancel(_ timer: ActiveTimer) {
         timers.removeAll { $0.id == timer.id }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.identifier(timer)])
+    }
+
+    /// Temporizador a correr para um passo (e a duração), se houver.
+    func timer(forStep stepID: UUID, duration: StepAnalysis.Duration) -> ActiveTimer? {
+        timers.first { $0.stepID == stepID && $0.label.hasSuffix(duration.label) }
     }
 
     private static func identifier(_ timer: ActiveTimer) -> String { "timer-\(timer.id.uuidString)" }
