@@ -1,9 +1,23 @@
+# macOS
 .DS_Store
+
+# Xcode (o projeto é gerado pelo XcodeGen a partir do project.yml)
 *.xcodeproj/
 *.xcworkspace/
+xcuserdata/
+*.xcuserstate
 Support/Info.plist
 build/
 DerivedData/
+
+# Compilação no GitHub Actions
 Payload/
 *.ipa
 screenshots/
+icon-renders/
+notes.txt
+
+# Python (scripts de design e do kit de imagens)
+__pycache__/
+*.pyc
+.venv/

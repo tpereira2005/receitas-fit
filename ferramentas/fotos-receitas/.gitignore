@@ -1,0 +1,9 @@
+# Só o kit (instruções, scripts e referências) fica no repositório.
+# As fotografias, as imagens geradas e os registos ficam na pasta de trabalho no PC.
+1-originais/
+2-finais/
+3-revisao/
+4-arquivo/
+alimentos/
+registo.jsonl
+__pycache__/

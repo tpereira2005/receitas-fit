@@ -1,6 +1,6 @@
 """Gera fotografias sintéticas de rótulos nutricionais para os testes de leitura de embalagens.
 
-As imagens ficam em ReceitasFitTests/Labels e são lidas pelo reconhecimento de texto do iOS
+As imagens ficam em ReceitasTests/Labels e são lidas pelo reconhecimento de texto do iOS
 (Vision) no simulador, para confirmar que a app extrai os valores certos.
 Uso: python design/make_test_labels.py
 """
@@ -9,7 +9,7 @@ import random
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-OUT = Path(__file__).resolve().parent.parent / "ReceitasFitTests" / "Labels"
+OUT = Path(__file__).resolve().parent.parent / "ReceitasTests" / "Labels"
 FONT = "C:/Windows/Fonts/arial.ttf"
 BOLD = "C:/Windows/Fonts/arialbd.ttf"
 

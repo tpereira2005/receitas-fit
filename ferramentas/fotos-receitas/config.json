@@ -1,0 +1,7 @@
+{
+  "modelo": "gpt-image-2.5-sunburst",
+  "tamanho_pedido": "quadrado, o maior disponível",
+  "tamanho_final": 1800,
+  "qualidade_jpeg": 90,
+  "correcoes_automaticas": 1
+}

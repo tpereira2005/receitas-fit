@@ -1,0 +1,6 @@
+{
+  "topo": "Top-down flat lay, camera at 90 degrees above the table. Round plate or bowl seen as a circle, its diameter about 55-60% of the image width, centered at 50% across and 44% down.",
+  "45": "Three-quarter view, camera at about 35-45 degrees. The plate appears as a wide ellipse about 60-65% of the image width; the food rises inside the central box and the far edge of the plate stays below 18% from the top.",
+  "frontal": "Straight-on view, camera at table height or up to 15 degrees. The glass, jar or tall dessert stands in the center; its top edge at about 22% from the top and its base at about 72%, so it never reaches the outer margins.",
+  "auto": "Choose the most flattering angle for this dish: top-down for bowls and flat dishes, three-quarter (35-45 degrees) for plated dishes, stacks and desserts, straight-on for drinks and tall glasses. Follow the composition rules exactly."
+}

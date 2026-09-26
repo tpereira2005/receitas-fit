@@ -1,0 +1,31 @@
+Turn this home-made phone photo into a professional, editorial-quality food photograph for a healthy-recipes app. You may completely rework the background, surface, light, color, props, styling and composition, as long as the dish stays true to the recipe and looks delicious.
+
+THE DISH
+Recipe: {prato}
+Keep faithful to the photo: {manter}
+
+APPROVED CHANGES (requested by the owner; apply them exactly, they take priority over the original photo)
+{alteracoes}
+
+Apart from the approved changes, keep the same food: same ingredients, colors, texture and portion. Do not add or remove anything else. You may make the food look fresher, neater and more appetizing (cleaner edges, better texture, nicer arrangement of the same elements).
+
+PHOTOGRAPHIC STYLE
+{estilo}
+
+CAMERA ANGLE
+{angulo}
+
+COMPOSITION (strict: the app crops this square image in several ways)
+- Square 1:1 image, one single hero dish, centered horizontally.
+- The visual center of the food sits at about 44% from the top (slightly above the middle of the image).
+- All the important food (what identifies the recipe) stays inside the central box from 18% to 82% of the width and from 28% to 60% of the height.
+- The plate, bowl, glass or container may extend a little beyond that box, but never beyond 9%-91% of the width or 16%-84% of the height.
+- The outer margins (top 16%, bottom 16%, left and right 9%) contain only background or a soft out-of-focus surface.
+- Keep the top-right corner and the bottom-left corner empty and calm (the app places badges there).
+- The bottom third of the image must be calm and low-detail (soft surface and gentle shadow), because text is placed over it.
+- Generous, even negative space around the dish. Props, if any, are minimal, secondary, partly out of frame and away from the corners mentioned above.
+
+AVOID
+Text, letters, logos, brand names, labels, watermarks, hands, people, faces, cutlery pointing at the camera, cluttered or busy backgrounds, multiple servings competing for attention, duplicated or deformed food, plastic or CGI look, oversaturated or neon colors, heavy vignette, fake-looking steam.
+
+{extra}

@@ -1,4 +1,4 @@
-name: ReceitasFit
+name: Receitas
 
 options:
   bundleIdPrefix: com.tpereira
@@ -9,7 +9,7 @@ options:
   # O XcodeGen ainda não conhece os ficheiros do Icon Composer (.icon); corrige o tipo depois de gerar.
   postGenCommand: >-
     /usr/bin/perl -0pi -e 's/lastKnownFileType = [\w.]+; (name = AppIcon\.icon; )?path = AppIcon\.icon;/lastKnownFileType = folder.iconcomposer.icon; $1path = AppIcon.icon;/g'
-    ReceitasFit.xcodeproj/project.pbxproj
+    Receitas.xcodeproj/project.pbxproj
 
 settings:
   base:
@@ -18,17 +18,17 @@ settings:
     # o código de interface fica seguro sem anotações e o trabalho em segundo plano é explícito.
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_APPROACHABLE_CONCURRENCY: YES
-    MARKETING_VERSION: "1.3.0"
+    MARKETING_VERSION: "1.4.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
 
 targets:
-  ReceitasFit:
+  Receitas:
     type: application
     platform: iOS
     sources:
-      - path: ReceitasFit
+      - path: Receitas
       # Ícone da app no formato Icon Composer (Liquid Glass, modos escuro, transparente e matizado).
       - path: AppIcon.icon
         buildPhase: resources
@@ -49,24 +49,24 @@ targets:
           - UIInterfaceOrientationPortrait
     scheme:
       testTargets:
-        - ReceitasFitTests
-        - ReceitasFitUITests
+        - ReceitasTests
+        - ReceitasUITests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit
-        PRODUCT_NAME: ReceitasFit
+        PRODUCT_NAME: Receitas
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: YES
 
-  ReceitasFitTests:
+  ReceitasTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: ReceitasFitTests
+      - path: ReceitasTests
     dependencies:
-      - target: ReceitasFit
+      - target: Receitas
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit.tests
@@ -74,18 +74,18 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
 
   # Testes de interface: tocam nos ecrãs como um utilizador (enquadramento, filtros, Definições…).
-  ReceitasFitUITests:
+  ReceitasUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - path: ReceitasFitUITests
+      - path: ReceitasUITests
     dependencies:
-      - target: ReceitasFit
+      - target: Receitas
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit.uitests
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1"
-        TEST_TARGET_NAME: ReceitasFit
+        TEST_TARGET_NAME: Receitas
         # O XCTest não aceita subclasses isoladas no MainActor por omissão; os testes marcam-se um a um.
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated

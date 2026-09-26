@@ -1,0 +1,22 @@
+Create a single food icon image for a healthy-recipes app: one isolated food item, photographed like a premium grocery product shot.
+
+THE FOOD
+Name (Portuguese): {nome}
+What to show: {mostrar}
+
+STYLE
+{estilo}
+
+BACKGROUND (strict)
+{fundo}
+
+COMPOSITION (strict: the app shows this image as a small rounded-square icon, 30 to 70 points wide)
+- Square 1:1 image with a single subject, centered horizontally and vertically.
+- The subject fills about 75% of the image width or height (whichever is larger), with even empty margins of about 12% on every side. Nothing touches the edges.
+- Simple, instantly recognizable silhouette that still reads clearly when shown very small. Prefer one piece, a small neat heap, or one simple container over many scattered pieces.
+- Front-facing and upright, not cut off, not tilted strongly.
+
+AVOID
+Text, letters, numbers, logos, brand names, labels, packaging, price tags, hands, people, cutlery (unless the food needs a spoon to be recognizable), plates with patterns, tables, surfaces, backgrounds, scenery, cast shadows on a floor, reflections, multiple different foods, cartoon or 3D-render look, CGI plastic look, oversaturated or neon colors.
+
+{extra}

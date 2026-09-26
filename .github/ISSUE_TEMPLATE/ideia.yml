@@ -1,0 +1,16 @@
+name: Ideia
+description: Algo para acrescentar ou melhorar mais tarde.
+title: "Ideia: "
+labels: [ideia]
+body:
+  - type: textarea
+    id: ideia
+    attributes:
+      label: A ideia
+      placeholder: Um widget com a próxima receita a fazer.
+    validations:
+      required: true
+  - type: textarea
+    id: porque
+    attributes:
+      label: Porque ajudaria

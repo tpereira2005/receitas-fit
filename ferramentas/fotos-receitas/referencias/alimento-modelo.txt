@@ -1,0 +1,16 @@
+# Ficha de um alimento (preenchida pelo Codex)
+# estados: por gerar → gerada → concluída
+estado: por gerar
+
+# Nome como aparece na app (é também o nome do ficheiro final).
+nome:
+
+# Categoria da app, para a pré-visualização: proteinas, laticinios, cereais, fruta,
+# legumes, gorduras, suplementos, temperos, outros
+categoria:
+
+# O que mostrar, em inglês (ver referencias/alimentos-representacao.md).
+mostrar:
+
+# Pedidos do utilizador para esta imagem, em inglês (opcional).
+notas:

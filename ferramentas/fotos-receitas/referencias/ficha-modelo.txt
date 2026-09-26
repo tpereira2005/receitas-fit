@@ -1,0 +1,25 @@
+# Ficha de uma fotografia. O Codex preenche-a e atualiza-a contigo.
+# Linhas "chave: valor". Nas listas, um item por linha começado por "- ".
+
+estado: por analisar
+prato:
+angulo: auto
+# topo · 45 · frontal · auto
+
+manter:
+# O que tem de continuar igual à foto (ingredientes, textura, cores, porção).
+
+acrescentar:
+# - bolacha Oreo triturada por cima
+
+alterar:
+# - servir no copo original da Ninja CREAMi em vez da taça
+
+remover:
+# - colher de plástico
+
+ambiente:
+# Opcional: cenário ou ambiente pedido para esta foto (por exemplo "bancada de mármore com luz de manhã").
+
+notas:
+# Observações da análise e decisões tomadas.

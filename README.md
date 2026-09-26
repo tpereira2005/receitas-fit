@@ -1,63 +1,105 @@
 # Receitas
 
-App pessoal para iPhone para guardar e organizar receitas fit e saudáveis, feita em **SwiftUI + SwiftData** com o design **Liquid Glass** do iOS 26+.
+[![Compilação](https://github.com/tpereira2005/receitas/actions/workflows/build.yml/badge.svg)](https://github.com/tpereira2005/receitas/actions/workflows/build.yml)
+[![Última versão](https://img.shields.io/github/v/release/tpereira2005/receitas?label=vers%C3%A3o&color=10B062)](https://github.com/tpereira2005/receitas/releases/latest)
+![iOS 26](https://img.shields.io/badge/iOS-26%2B-black)
+![Swift 6](https://img.shields.io/badge/Swift-6-F05138)
+
+App pessoal para iPhone para guardar e cozinhar receitas fit: biblioteca de alimentos com leitura de embalagens, calorias e macros calculados sozinhos, modo cozinhar com temporizadores e lembrete do congelador para os gelados da Ninja CREAMi. Feita em **SwiftUI + SwiftData**, com o design **Liquid Glass** do iOS 26, compilada no GitHub Actions e instalada com o **SideStore**.
 
 <p>
-  <img src="https://github.com/tpereira2005/receitas-fit/releases/download/latest/1-inicio.png" width="200">
-  <img src="https://github.com/tpereira2005/receitas-fit/releases/download/latest/2-receita.png" width="200">
-  <img src="https://github.com/tpereira2005/receitas-fit/releases/download/latest/4-alimentos.png" width="200">
-  <img src="https://github.com/tpereira2005/receitas-fit/releases/download/latest/10-receita-escuro.png" width="200">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/1-inicio.png" width="190" alt="Início">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/2-receita.png" width="190" alt="Receita">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/38-modo-cozinhar.png" width="190" alt="Modo cozinhar">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/4-alimentos.png" width="190" alt="Alimentos">
 </p>
+<p>
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/39-inicio-congelador.png" width="190" alt="No congelador">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/8-receitas.png" width="190" alt="Receitas">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/33-definicoes.png" width="190" alt="Definições">
+  <img src="https://github.com/tpereira2005/receitas/releases/download/latest/10-receita-escuro.png" width="190" alt="Receita em modo escuro">
+</p>
+
+> As capturas são tiradas automaticamente no simulador em cada versão.
 
 ## Funcionalidades
 
-- **Início**: carrossel de receitas recentes, filtros por categoria em Liquid Glass e grelha de cartões com fotografia, calorias e proteína
-- **Receita**: fotografia em destaque que se dissolve no conteúdo, ingredientes com escala de porções e checklist, passos que podes ir marcando, nutrição por porção ou da receita toda, e link para a publicação original
-- **Alimentos**: biblioteca de alimentos com os valores do rótulo por 100 g ou 100 ml (energia, lípidos, saturados, hidratos, açúcares, fibra, proteína e sal) e peso por unidade opcional
-- **Macros automáticos**: as receitas usam ingredientes da biblioteca (g, ml, unidades, colheres ou q.b.) e a app calcula as calorias e os macros. Quando editas um alimento, as receitas que o usam atualizam-se.
-- **Pesquisa**: separador próprio na barra inferior, com filtros rápidos (alta proteína, até 400 kcal, até 20 min, favoritas)
-- **Explorar**: categorias (incluindo Gelados), coleções inteligentes e etiquetas
-- **Cópias de segurança** em JSON, com receitas e alimentos
+**Receitas**
+- Fotografia em destaque, com enquadramento e zoom escolhidos para todos os recortes da app.
+- Ingredientes com escala de doses, peso ao lado das medidas ("3 bolachas · 24 g") e peso de cada dose.
+- Passos que se marcam; o que marcaste fica guardado 12 horas e o ecrã não se apaga enquanto cozinhas.
+- Nutrição por dose ou da receita toda, calculada a partir da biblioteca de alimentos.
+- Tempo de preparação, confeção e **espera** (congelador, frigorífico, repouso) e nome das porções (dose, fatia…).
+- "Fiz esta receita", com histórico; duplicar; partilhar como imagem quadrada, para Stories ou como texto.
 
-## Instalar e atualizar com o SideStore
+**Cozinhar**
+- **Modo cozinhar**: um passo de cada vez, em letra grande, com os ingredientes desse passo.
+- **Temporizadores** tirados do texto ("forno durante 30 minutos" → ▶ 30 min), com notificação e sempre à vista.
+- **Congelador**: "Congelei agora" avisa quando o gelado está pronto a processar e aparece no Início.
 
-### Fonte do SideStore (recomendado)
+**Alimentos**
+- Valores do rótulo por 100 g ou 100 ml, porções com nome ("1 scoop = 30 g"), peso das colheres e imagem.
+- **Ler embalagem**: fotografias do rótulo lidas pelo Gemini (ou no iPhone, sem chave), com o Open Food Facts a completar; tudo é revisto antes de guardar.
+- Alterar um alimento nunca muda uma receita sem confirmação.
 
-1. No iPhone, abre o **SideStore** → separador **Sources** → **+**.
-2. Cola este link e confirma:
+**Organizar e encontrar**
+- Início com Recentes, No congelador, Favoritas e Feitas recentemente.
+- Categorias, coleções (alta proteína, até 400 kcal, até 20 min, favoritas), etiquetas e "já fizeste?", iguais em Receitas e na Pesquisa.
+- Pesquisa de receitas e alimentos por relevância; receitas no Spotlight e atalhos para a Siri.
+
+**Dados**
+- Cópias de segurança automáticas (uma por dia, numa pasta à escolha, com as fotografias) e restauro dessas cópias.
+- Exportar e importar em JSON; **Apagadas recentemente** durante 30 dias.
+- Aviso antes de a assinatura do SideStore expirar.
+
+## Instalar com o SideStore
+
+1. No iPhone, abre o **SideStore** → **Sources** → **+** e cola:
 
    ```
-   https://raw.githubusercontent.com/tpereira2005/receitas-fit/sidestore/source.json
+   https://raw.githubusercontent.com/tpereira2005/receitas/sidestore/source.json
    ```
 
-3. Abre a fonte **Receitas** e toca em **Get**/**Update**.
+2. Abre a fonte **Receitas** e toca em **Get**. As versões novas aparecem em **My Apps → Updates**, e atualizar mantém as receitas.
 
-A partir daí, cada versão nova aparece em **My Apps → Updates**. Atualizar mantém as receitas, porque a app é substituída e não apagada.
+Também podes descarregar o `Receitas.ipa` da [última versão](https://github.com/tpereira2005/receitas/releases/latest) e abri-lo no SideStore (**My Apps → +**). Com um Apple ID gratuito, a assinatura dura 7 dias; o SideStore renova-a sozinho.
 
-### À mão
+## Como é compilada
 
-Abre [a última versão](https://github.com/tpereira2005/receitas-fit/releases/latest) no Safari, descarrega o `ReceitasFit.ipa` e abre-o no SideStore (**My Apps → +**).
+Não é preciso Mac. Cada envio para `main` corre o [workflow](.github/workflows/build.yml) em três etapas:
 
-> Com um Apple ID gratuito, a assinatura dura 7 dias. O SideStore renova-a sozinho, desde que o abras de vez em quando.
-
-## Como funciona a compilação
-
-Não é preciso Mac. Cada `push` para `main` corre o workflow [`.github/workflows/build.yml`](.github/workflows/build.yml) num Mac do GitHub Actions:
-
-1. Gera o projeto Xcode a partir de [`project.yml`](project.yml) (XcodeGen) e define a versão `1.1.<número da build>`.
-2. Compila a app sem assinatura e empacota o `ReceitasFit.ipa`. O SideStore assina-o no iPhone.
-3. Publica o IPA numa release `v1.1.N` (mantém as 5 mais recentes) e na release `latest`.
-4. Gera a fonte do SideStore com [`scripts/make_source.py`](scripts/make_source.py) e publica-a no ramo `sidestore`. A mensagem do commit aparece como nota da versão.
-5. Abre a app no Simulador de iOS e tira capturas de ecrã, que ficam na release `latest`.
+| Etapa | O que faz |
+|---|---|
+| **Testes** | Gera o projeto com o XcodeGen e corre os testes do código e os testes de interface no simulador. |
+| **IPA e fonte do SideStore** | Compila sem assinatura, cria o `Receitas.ipa`, publica a versão `1.4.N` (ficam as 5 mais recentes e a `latest`) e atualiza a fonte no ramo [`sidestore`](https://github.com/tpereira2005/receitas/tree/sidestore). A mensagem do commit é a nota da versão. |
+| **Capturas** | Abre a app no simulador e tira capturas de todos os ecrãs, em claro, escuro e texto grande, publicadas na versão `latest`. |
 
 ## Estrutura
 
 ```
-ReceitasFit/
-  App/            Entrada da app, TabView (Liquid Glass + separador de pesquisa) e preparação dos dados
-  Models/         Recipe e Food (SwiftData), cálculo nutricional, biblioteca de origem, migração, backup, exemplos
-  Utilities/      Formatação e imagens
-  Views/          Início, Receita, Editor, Alimentos, Favoritas, Explorar, Pesquisa, Definições
-  Resources/      Ícone e cor de destaque
-scripts/          Gerador da fonte do SideStore
+Receitas/
+  App/                Entrada da app, separadores, Spotlight, Siri e validade do SideStore
+  Models/             Receita e alimento (SwiftData), esquemas e migrações, nutrição, cópias,
+                      conteúdo de origem, filtros, modo cozinhar e leitura de embalagens
+  Views/              Home, Browse (Receitas e Pesquisa), Detail, Editor, Foods, Settings, Share, Shared
+  Utilities/          Formatação, imagens e Porta-chaves
+  Resources/          Ícones, cor de destaque e ConteudoBase.json (alimentos e receitas de origem)
+ReceitasTests/        Testes do código (dados, migrações, nutrição, leitura de rótulos, cozinhar…)
+ReceitasUITests/      Testes de interface
+AppIcon.icon/         Ícone em Liquid Glass (Icon Composer)
+design/               Scripts que geram ícones, guias de fotografia e rótulos de teste
+ferramentas/          Kit do Codex para as fotografias das receitas e as imagens dos alimentos
+scripts/              Gerador da fonte do SideStore
+docs/                 Documentação
 ```
+
+## Documentação
+
+- [Arquitetura](docs/arquitetura.md): dados, migrações, cópias de segurança e como as peças se ligam.
+- [Conteúdo de origem](docs/conteudo-de-origem.md): os alimentos e as receitas que vêm com a app e como os atualizar.
+- [Imagens com o Codex](docs/imagens-com-o-codex.md): fotografias das receitas e imagens dos alimentos.
+- [Histórico das versões](docs/versoes.md): o que mudou em cada versão e as decisões tomadas.
+
+## Licença
+
+Todos os direitos reservados. O código está público só para consulta; ver [LICENSE](LICENSE).

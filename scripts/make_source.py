@@ -16,14 +16,44 @@ notes = os.environ.get("NOTES", "").strip() or f"Versão {version}"
 
 bundle_id = "com.tpereira.receitasfit"
 releases = f"https://github.com/{repo}/releases/download"
-download_url = f"{releases}/v{version}/ReceitasFit.ipa"
+download_url = f"{releases}/v{version}/Receitas.ipa"
 icon_url = f"https://raw.githubusercontent.com/{repo}/sidestore/AppIcon.png"
-screenshots = [f"{releases}/latest/{name}.png" for name in ("1-inicio", "2-receita", "4-alimentos", "3-pesquisa")]
+screenshots = [
+    f"{releases}/latest/{name}.png"
+    for name in ("1-inicio", "2-receita", "38-modo-cozinhar", "39-inicio-congelador", "8-receitas", "4-alimentos", "33-definicoes")
+]
 date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 description = (
-    "App pessoal para guardar e organizar receitas fit e saudáveis, com biblioteca de alimentos, "
-    "cálculo automático de calorias e macros e o design Liquid Glass do iOS."
+    "App pessoal para guardar e organizar receitas fit e saudáveis: biblioteca de alimentos com leitura de "
+    "embalagens, calorias e macros calculados sozinhos, modo cozinhar com temporizadores, lembrete do "
+    "congelador e cópias de segurança automáticas, com o design Liquid Glass do iOS."
 )
+
+# Notícias das versões grandes (aparecem no separador de notícias do SideStore).
+news = [
+    {
+        "title": "Receitas 1.4",
+        "identifier": "receitas-1.4",
+        "caption": "Modo cozinhar com temporizadores, lembrete do congelador, pesos e doses, "
+                   "enquadramento com zoom e Apagadas recentemente.",
+        "date": "2026-09-26",
+        "tintColor": "#10B062",
+        "imageURL": f"{releases}/latest/38-modo-cozinhar.png",
+        "appID": "com.tpereira.receitasfit",
+        "notify": False,
+    },
+    {
+        "title": "Receitas 1.3",
+        "identifier": "receitas-1.3",
+        "caption": "Novo Início, filtros combinados, leitura de embalagens com o Gemini, "
+                   "porções e colheres, fotografias e cópias automáticas.",
+        "date": "2026-09-23",
+        "tintColor": "#10B062",
+        "imageURL": f"{releases}/latest/1-inicio.png",
+        "appID": "com.tpereira.receitasfit",
+        "notify": False,
+    },
+]
 
 version_entry = {
     "version": version,
@@ -65,7 +95,7 @@ source = {
     "website": f"https://github.com/{repo}",
     "tintColor": "#10B062",
     "apps": [app],
-    "news": [],
+    "news": news,
 }
 
 sys.stdout.reconfigure(encoding="utf-8")

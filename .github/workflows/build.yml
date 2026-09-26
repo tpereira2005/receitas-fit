@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SCHEME: ReceitasFit
+  SCHEME: Receitas
   BUNDLE_ID: com.tpereira.receitasfit
   # Versão base; o número da build é acrescentado automaticamente (ex.: 1.1.7).
   VERSION_BASE: "1.4"
@@ -26,6 +26,7 @@ jobs:
   tests:
     name: Testes
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -51,7 +52,7 @@ jobs:
       - name: Correr testes
         run: |
           set -o pipefail
-          xcodebuild test             -project ReceitasFit.xcodeproj             -scheme "$SCHEME"             -destination "id=$UDID"             -derivedDataPath build             | xcbeautify --renderer github-actions
+          xcodebuild test             -project Receitas.xcodeproj             -scheme "$SCHEME"             -destination "id=$UDID"             -derivedDataPath build             | xcbeautify --renderer github-actions
 
       - name: Texto lido nas fotografias de teste
         if: always()
@@ -61,6 +62,7 @@ jobs:
     name: IPA e fonte do SideStore
     needs: tests
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -76,13 +78,13 @@ jobs:
         run: |
           brew install xcodegen xcbeautify
           xcodegen generate
-          grep -n "AppIcon.icon" ReceitasFit.xcodeproj/project.pbxproj
+          grep -n "AppIcon.icon" Receitas.xcodeproj/project.pbxproj
 
       - name: Compilar (sem assinatura)
         run: |
           set -o pipefail
           xcodebuild build \
-            -project ReceitasFit.xcodeproj \
+            -project Receitas.xcodeproj \
             -scheme "$SCHEME" \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -116,20 +118,23 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
+          retention-days: 14
           name: icon-renders
           path: icon-renders
           if-no-files-found: warn
 
       - uses: actions/upload-artifact@v5
         with:
-          name: ReceitasFit-ipa
-          path: ReceitasFit.ipa
+          retention-days: 14
+          name: Receitas-ipa
+          path: Receitas.ipa
 
       - name: Publicar versão
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git log -1 --pretty=%B > notes.txt
+          # Notas da versão = mensagem do commit, sem as linhas "Co-Authored-By".
+          git log -1 --pretty=%B | grep -vi '^co-authored-by:' > notes.txt || true
           # Release própria desta versão (link fixo usado pelo SideStore)
           gh release create "v$APP_VERSION" "$SCHEME.ipa" \
             --title "Receitas $APP_VERSION" \
@@ -139,6 +144,8 @@ jobs:
           # Release "latest": link fixo para instalar à mão e para as capturas de ecrã
           if gh release view latest >/dev/null 2>&1; then
             gh release upload latest "$SCHEME.ipa" --clobber
+            # IPA com o nome antigo (antes de a app se chamar só "Receitas").
+            gh release delete-asset latest ReceitasFit.ipa --yes 2>/dev/null || true
             if [ -f icon-renders/Default.png ]; then
               cp icon-renders/Default.png AppIcon.png
               gh release upload latest AppIcon.png --clobber
@@ -186,6 +193,7 @@ jobs:
     name: Capturas do simulador
     needs: ipa
     runs-on: macos-26
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
@@ -213,7 +221,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -project ReceitasFit.xcodeproj \
+            -project Receitas.xcodeproj \
             -scheme "$SCHEME" \
             -configuration Debug \
             -destination "id=$UDID" \
@@ -294,6 +302,7 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
+          retention-days: 14
           name: screenshots
           path: screenshots
 

@@ -1,0 +1,30 @@
+name: Erro
+description: Algo não funciona como devia na app.
+title: "Erro: "
+labels: [erro]
+body:
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que aconteceu?
+      placeholder: Ao abrir "Ajustar enquadramento", a janela fecha e volta à receita.
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como repetir
+      placeholder: |
+        1. Abrir uma receita
+        2. ⋯ → Editar
+        3. Tocar em "Ajustar enquadramento"
+  - type: input
+    id: versao
+    attributes:
+      label: Versão da app
+      description: Definições → cabeçalho (ex.: 1.4.62).
+  - type: textarea
+    id: capturas
+    attributes:
+      label: Capturas de ecrã
+      description: Arrasta para aqui as imagens, se ajudarem.
