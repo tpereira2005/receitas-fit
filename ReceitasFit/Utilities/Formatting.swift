@@ -8,6 +8,12 @@ nonisolated enum Format {
         return rest == 0 ? "\(hours) h" : "\(hours) h \(rest) min"
     }
 
+    /// Versão curta para cartões e listas: "2 h 30" em vez de "2 h 30 min".
+    static func shortMinutes(_ minutes: Int) -> String {
+        guard minutes >= 60, minutes % 60 != 0 else { return self.minutes(minutes) }
+        return "\(minutes / 60) h \(minutes % 60)"
+    }
+
     /// "Faltam 3 h", "Falta 1 h", "Faltam 45 min".
     static func remaining(_ minutes: Int) -> String {
         let text = self.minutes(minutes)

@@ -309,10 +309,13 @@ struct FoodRow: View {
                 Text(food.name)
                     .font(.body.weight(.medium))
                     .lineLimit(2)
-                HStack(spacing: 8) {
-                    if !food.brand.isEmpty {
-                        Text(food.brand)
-                            .lineLimit(1)
+                // Marca e macros numa linha; se não couberem, ficam só os macros.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        if !food.brand.isEmpty {
+                            Text(food.brand).fixedSize()
+                        }
+                        MacroDots(facts: food.per100)
                     }
                     MacroDots(facts: food.per100)
                 }

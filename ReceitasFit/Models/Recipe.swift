@@ -202,9 +202,9 @@ extension Recipe {
     /// "10 min", "10 min + 24 h" ou só "24 h" (a espera conta à parte do tempo ativo).
     var timeText: String? {
         switch (totalMinutes > 0, waitMinutes > 0) {
-        case (true, true): "\(Format.minutes(totalMinutes)) + \(Format.minutes(waitMinutes))"
-        case (true, false): Format.minutes(totalMinutes)
-        case (false, true): Format.minutes(waitMinutes)
+        case (true, true): "\(Format.shortMinutes(totalMinutes)) + \(Format.shortMinutes(waitMinutes))"
+        case (true, false): Format.shortMinutes(totalMinutes)
+        case (false, true): Format.shortMinutes(waitMinutes)
         case (false, false): nil
         }
     }
