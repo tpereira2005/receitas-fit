@@ -269,6 +269,8 @@ jobs:
           shot 39-inicio-congelador -screenshotWaiting YES
           shot 40-receita-espera -screenshotWaiting YES -screenshotOpenFirst YES -screenshotDetailWait YES
           shot 41-receita-ingredientes -screenshotOpenFirst YES -screenshotDetailScroll YES -screenshotDetailIngredients YES
+          shot 42-apagadas -screenshotTrash YES -screenshotSettings YES -screenshotSettingsPage apagadas
+          shot 43-restaurar-copia -screenshotSettings YES -screenshotBackupState ready -screenshotSettingsPage restaurar
           shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
           shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
           shot 26-partilhar-stories -screenshotOpenFirst YES -screenshotShare YES -screenshotShareFormat story

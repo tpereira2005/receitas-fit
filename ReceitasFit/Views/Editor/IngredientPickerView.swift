@@ -4,7 +4,7 @@ import SwiftData
 /// Escolher um alimento da biblioteca e indicar a quantidade.
 struct IngredientPickerView: View {
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Food.name) private var foods: [Food]
+    @Query(filter: Food.notDeleted, sort: \Food.name) private var foods: [Food]
 
     /// Ingrediente a substituir (ligar à biblioteca), mantendo a quantidade quando possível.
     var replacing: Ingredient?

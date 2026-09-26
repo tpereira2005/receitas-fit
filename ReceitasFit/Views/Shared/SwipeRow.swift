@@ -134,12 +134,12 @@ struct RecipeListItem: View {
         .alert("Apagar receita?", isPresented: $confirmDelete) {
             Button("Apagar", role: .destructive) {
                 Haptics.warning()
-                withAnimation { context.delete(recipe) }
+                withAnimation { recipe.moveToTrash() }
                 try? context.save()
             }
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("“\(recipe.title)” será apagada deste iPhone.")
+            Text("“\(recipe.title)” fica em Apagadas recentemente durante 30 dias.")
         }
     }
 }

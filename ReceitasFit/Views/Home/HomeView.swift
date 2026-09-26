@@ -5,7 +5,7 @@ import SwiftData
 /// Recentes, à espera (congelador…), favoritas, feitas recentemente e etiquetas.
 /// As categorias e as coleções ficam no separador Receitas.
 struct HomeView: View {
-    @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted, sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
     @Environment(\.modelContext) private var context
     @State private var path = NavigationPath()
     @State private var showingNewRecipe = false
@@ -282,6 +282,13 @@ struct HomeView: View {
             let frozen = recipes.filter { $0.waitKind == .freezer }
             frozen.first?.frozenAt = .now.addingTimeInterval(-20 * 3600)
             frozen.dropFirst().first?.frozenAt = .now.addingTimeInterval(-26 * 3600)
+            try? context.save()
+        }
+        // Capturas do CI: uma receita e um alimento em "Apagadas recentemente".
+        if ScreenshotMode.flag("screenshotTrash"), let last = recipes.last {
+            last.moveToTrash()
+            let foods = (try? context.fetch(FetchDescriptor<Food>(predicate: Food.notDeleted))) ?? []
+            foods.first?.moveToTrash()
             try? context.save()
         }
         if ScreenshotMode.flag("screenshotOpenFirst"), path.isEmpty, let first = recipes.first {

@@ -7,8 +7,8 @@ import UniformTypeIdentifiers
 /// Cópias automáticas, exportar e importar num só sítio. Desativar fica à parte, no fim.
 struct BackupSettingsView: View {
     @Environment(\.modelContext) private var context
-    @Query private var recipes: [Recipe]
-    @Query private var foods: [Food]
+    @Query(filter: Recipe.notDeleted) private var recipes: [Recipe]
+    @Query(filter: Food.notDeleted) private var foods: [Food]
 
     private let autoBackup = AutoBackup.shared
     @State private var exportDocument: BackupDocument?
@@ -32,10 +32,17 @@ struct BackupSettingsView: View {
                 Button("Importar cópia", systemImage: "square.and.arrow.down") {
                     isImporting = true
                 }
+                if autoBackup.isEnabled, autoBackup.folderName != nil {
+                    NavigationLink {
+                        AutoBackupRestoreView()
+                    } label: {
+                        Label("Restaurar uma cópia automática", systemImage: "clock.arrow.circlepath")
+                    }
+                }
             } header: {
                 Text("Ficheiro")
             } footer: {
-                Text("Exporta antes de mudar de iPhone. Importar só acrescenta o que ainda não existe na app.")
+                Text("Exporta antes de mudar de iPhone. Importar e restaurar só acrescentam o que falta na app.")
             }
 
             if autoBackup.isEnabled, autoBackup.folderName != nil {
@@ -132,6 +139,117 @@ struct BackupSettingsView: View {
             }
         case .failure(let error):
             message = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Restaurar uma cópia automática
+
+/// As cópias automáticas da pasta, com a data. Restaurar acrescenta o que falta (nunca apaga nem substitui).
+struct AutoBackupRestoreView: View {
+    @Environment(\.modelContext) private var context
+    private let autoBackup = AutoBackup.shared
+
+    @State private var backups: [AutoBackup.StoredBackup]?
+    @State private var loadError: String?
+    @State private var restoring: AutoBackup.StoredBackup?
+    @State private var working = false
+    @State private var message: String?
+
+    var body: some View {
+        List {
+            if let backups {
+                Section {
+                    ForEach(backups) { backup in
+                        Button {
+                            restoring = backup
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "doc.badge.clock")
+                                    .font(.title3)
+                                    .foregroundStyle(.blue)
+                                    .frame(width: 30)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(backup.date.formatted(.dateTime.weekday(.wide).day().month(.wide)).capitalizedFirst)
+                                        .foregroundStyle(.primary)
+                                    Text("\(backup.date.formatted(date: .omitted, time: .shortened)) · \(backup.size.formatted(.byteCount(style: .file)))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 8)
+                                if working, restoring == backup {
+                                    ProgressView()
+                                }
+                            }
+                        }
+                        .disabled(working)
+                    }
+                } footer: {
+                    if !backups.isEmpty {
+                        Text("Restaurar acrescenta as receitas e os alimentos que faltam na app. O que já tens fica como está.")
+                    }
+                }
+            }
+        }
+        .overlay {
+            if let loadError {
+                ContentUnavailableView("Não foi possível ler a pasta", systemImage: "exclamationmark.triangle", description: Text(loadError))
+            } else if backups == nil {
+                ProgressView()
+            } else if backups?.isEmpty == true {
+                ContentUnavailableView("Ainda sem cópias", systemImage: "doc.badge.clock",
+                                       description: Text("A primeira cópia automática aparece aqui."))
+            }
+        }
+        .navigationTitle("Cópias automáticas")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .confirmationDialog(
+            "Restaurar esta cópia?",
+            isPresented: Binding(get: { restoring != nil && !working }, set: { if !$0 && !working { restoring = nil } }),
+            titleVisibility: .visible,
+            presenting: restoring
+        ) { backup in
+            Button("Acrescentar o que falta") { Task { await restore(backup) } }
+        } message: { backup in
+            Text("Cópia de \(backup.date.formatted(date: .long, time: .shortened)). Nada do que tens na app é apagado nem substituído.")
+        }
+        .alert("Restaurar", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(message ?? "")
+        }
+    }
+
+    private func load() async {
+        switch await autoBackup.storedBackups() {
+        case .success(let list): backups = list
+        case .failure(let error): loadError = error.message
+        }
+    }
+
+    private func restore(_ backup: AutoBackup.StoredBackup) async {
+        working = true
+        defer {
+            working = false
+            restoring = nil
+        }
+        switch await autoBackup.readBackup(backup) {
+        case .success(let data):
+            do {
+                let restored = try RecipeBackup.restore(from: data, into: context)
+                if restored.recipes == 0 && restored.foods == 0 {
+                    message = "A app já tem tudo o que está nesta cópia."
+                } else {
+                    Haptics.success()
+                    let foodsText = restored.foods == 1 ? "1 alimento" : "\(restored.foods) alimentos"
+                    message = "Recuperados: \(Format.recipes(restored.recipes)) e \(foodsText)."
+                }
+            } catch {
+                message = "Esta cópia não pôde ser lida."
+            }
+        case .failure(let error):
+            message = error.message
         }
     }
 }

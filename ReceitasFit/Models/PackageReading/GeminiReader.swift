@@ -20,6 +20,8 @@ enum GeminiReader {
     nonisolated struct Result: Equatable, Sendable {
         var name: String
         var brand: String
+        /// Categoria sugerida pelo Gemini (o utilizador pode mudar no editor).
+        var category: FoodCategory? = nil
         var facts: PartialFacts
         /// Porção indicada no rótulo (ex.: "dose" = 30 g), para sugerir como porção do alimento.
         var servingName: String?
@@ -141,6 +143,7 @@ enum GeminiReader {
     - Se um valor não estiver visível, usa null. Nunca inventes valores.
     - "nome": nome do produto como aparece na frente, em português se existir. "marca": só a marca.
     - "porcao_nome" e "porcao_gramas": a porção indicada no rótulo (ex.: "dose", 30), se existir.
+    - "categoria": a categoria que melhor descreve o alimento: protein (carne, peixe, ovos, tofu), dairy (leite,     iogurtes, queijos, bebidas vegetais), grains (cereais, pão, massa, arroz, bolachas, farinhas), fruit, vegetables,     fats (azeite, frutos secos, sementes, manteigas, chocolate), supplements (proteína em pó, barras proteicas),     condiments (temperos, molhos, doces, adoçantes) ou other.
     - "codigo_barras": os dígitos por baixo do código de barras, se estiverem visíveis.
     - Não copies a lista de ingredientes.
     - "notas": dúvidas ou problemas de leitura (em português, curto). Vazio se não houver.
@@ -155,6 +158,7 @@ enum GeminiReader {
         "properties": [
             "nome": ["type": "STRING"],
             "marca": ["type": "STRING"],
+            "categoria": ["type": "STRING", "enum": FoodCategory.allCases.map(\.rawValue)],
             "base": ["type": "STRING", "enum": ["100g", "100ml"]],
             "energia_kcal": number("kcal por 100 g/ml"),
             "lipidos": number("g por 100 g/ml"),
@@ -173,7 +177,7 @@ enum GeminiReader {
             "codigo_barras": ["type": "STRING", "nullable": true],
             "notas": ["type": "STRING"],
         ],
-        "required": ["nome", "marca", "base", "energia_kcal", "lipidos", "saturados", "hidratos",
+        "required": ["nome", "marca", "categoria", "base", "energia_kcal", "lipidos", "saturados", "hidratos",
                      "acucares", "fibra", "proteina", "sal", "menor_que", "notas"],
     ]
 
@@ -223,6 +227,7 @@ enum GeminiReader {
         return Result(
             name: string("nome"),
             brand: string("marca"),
+            category: FoodCategory(rawValue: string("categoria")),
             facts: facts,
             servingName: servingName.isEmpty ? nil : servingName,
             servingGrams: (answer["porcao_gramas"] as? Double).flatMap { $0 > 0 ? $0 : nil },

@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 struct FoodEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
-    @Query private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted) private var recipes: [Recipe]
 
     /// Receitas a rever depois de guardar um alimento já usado.
     private struct PendingReview: Hashable {

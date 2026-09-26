@@ -189,12 +189,12 @@ struct RecipeGrid: View {
         ) { recipe in
             Button("Apagar", role: .destructive) {
                 Haptics.warning()
-                withAnimation { context.delete(recipe) }
+                withAnimation { recipe.moveToTrash() }
                 try? context.save()
             }
             Button("Cancelar", role: .cancel) {}
         } message: { recipe in
-            Text("“\(recipe.title)” será apagada deste iPhone. Esta ação não pode ser anulada.")
+            Text("“\(recipe.title)” fica em Apagadas recentemente durante 30 dias.")
         }
     }
 }

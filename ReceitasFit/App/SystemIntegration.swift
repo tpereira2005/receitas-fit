@@ -82,7 +82,7 @@ nonisolated struct RecipeEntityQuery: EntityStringQuery {
     @MainActor
     private func recipes() -> [Recipe] {
         guard let container = try? DataStore.shared.get() else { return [] }
-        let descriptor = FetchDescriptor<Recipe>(sortBy: [SortDescriptor(\.title)])
+        let descriptor = FetchDescriptor<Recipe>(predicate: Recipe.notDeleted, sortBy: [SortDescriptor(\.title)])
         return (try? container.mainContext.fetch(descriptor)) ?? []
     }
 

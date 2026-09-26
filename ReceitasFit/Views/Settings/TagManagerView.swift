@@ -5,7 +5,7 @@ import SwiftData
 /// Mostra as usadas nas receitas e as da lista (as de origem e as criadas aqui), mesmo sem receitas.
 struct TagManagerView: View {
     @Environment(\.modelContext) private var context
-    @Query private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted) private var recipes: [Recipe]
     @AppStorage(TagLibrary.catalogKey) private var catalogRaw = ""
 
     @State private var creating = false

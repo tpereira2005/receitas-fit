@@ -5,7 +5,7 @@ struct FilteredRecipesView: View {
     let filter: RecipeFilter
     let namespace: Namespace.ID
 
-    @Query(sort: \Recipe.title) private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted, sort: \Recipe.title) private var recipes: [Recipe]
 
     private var results: [Recipe] { recipes.filter { filter.matches($0) } }
 

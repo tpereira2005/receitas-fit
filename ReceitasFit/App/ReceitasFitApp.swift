@@ -86,7 +86,7 @@ struct RootView: View {
 
     /// Spotlight e parâmetros dos Atalhos/Siri com as receitas atuais.
     private func updateSystemIntegration() {
-        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>(predicate: Recipe.notDeleted))) ?? []
         SpotlightIndex.update(with: recipes)
         ReceitasShortcuts.updateAppShortcutParameters()
     }
@@ -118,6 +118,8 @@ struct RootView: View {
             DataMigration.migrate(context, from: dataVersion)
             dataVersion = DataMigration.currentVersion
         }
+        // O que está em "Apagadas recentemente" há mais de 30 dias sai de vez.
+        RecentlyDeleted.purge(context)
     }
 }
 

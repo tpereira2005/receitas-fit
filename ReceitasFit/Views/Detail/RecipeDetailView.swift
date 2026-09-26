@@ -116,7 +116,7 @@ struct RecipeDetailView: View {
             Button("Apagar", role: .destructive, action: deleteRecipe)
             Button("Cancelar", role: .cancel) {}
         } message: {
-            Text("“\(recipe.title)” será apagada deste iPhone. Esta ação não pode ser anulada.")
+            Text("Fica em Apagadas recentemente durante 30 dias; podes recuperá-la nas Definições.")
         }
         .onChange(of: recipe.servings) { _, newValue in
             servings = max(1, newValue)
@@ -530,7 +530,7 @@ struct RecipeDetailView: View {
 
     private func deleteRecipe() {
         Haptics.warning()
-        context.delete(recipe)
+        recipe.moveToTrash()
         try? context.save()
         dismiss()
     }

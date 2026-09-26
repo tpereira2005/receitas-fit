@@ -4,8 +4,8 @@ import SwiftData
 /// Biblioteca de alimentos: os ingredientes e os respetivos valores nutricionais.
 struct FoodsView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \Food.name) private var foods: [Food]
-    @Query private var recipes: [Recipe]
+    @Query(filter: Food.notDeleted, sort: \Food.name) private var foods: [Food]
+    @Query(filter: Recipe.notDeleted) private var recipes: [Recipe]
     @State private var searchText = ""
     @State private var path = NavigationPath()
     @State private var showingEditor = false
@@ -105,14 +105,14 @@ struct FoodsView: View {
 
     private func deletionMessage(for food: Food) -> String {
         let count = recipes.filter { $0.ingredients.contains { $0.foodID == food.id } }.count
-        guard count > 0 else { return "“\(food.name)” será apagado da biblioteca." }
+        guard count > 0 else { return "Fica em Apagadas recentemente durante 30 dias." }
         let recipesText = count == 1 ? "1 receita" : "\(count) receitas"
-        return "“\(food.name)” é usado em \(recipesText). Essas receitas mantêm os valores atuais deste ingrediente."
+        return "“\(food.name)” é usado em \(recipesText), que mantêm os valores atuais. Fica em Apagadas recentemente durante 30 dias."
     }
 
     private func delete(_ food: Food) {
         Haptics.warning()
-        context.delete(food)
+        food.moveToTrash()
         try? context.save()
     }
 

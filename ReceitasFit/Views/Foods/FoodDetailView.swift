@@ -7,7 +7,7 @@ struct FoodDetailView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Recipe.title) private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted, sort: \Recipe.title) private var recipes: [Recipe]
     @State private var showsTitle = false
     @State private var showingEditor = false
     @State private var confirmDelete = false
@@ -177,9 +177,9 @@ struct FoodDetailView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             if usedIn.isEmpty {
-                Text("“\(food.name)” será apagado da biblioteca.")
+                Text("Fica em Apagadas recentemente durante 30 dias.")
             } else {
-                Text("“\(food.name)” é usado em \(Format.recipes(usedIn.count)). Essas receitas mantêm os valores atuais deste ingrediente.")
+                Text("“\(food.name)” é usado em \(Format.recipes(usedIn.count)). Essas receitas mantêm os valores atuais. Fica em Apagadas recentemente durante 30 dias.")
             }
         }
     }
@@ -244,7 +244,7 @@ struct FoodDetailView: View {
 
     private func deleteFood() {
         Haptics.warning()
-        context.delete(food)
+        food.moveToTrash()
         try? context.save()
         dismiss()
     }

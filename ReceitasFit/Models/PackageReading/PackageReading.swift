@@ -134,6 +134,8 @@ struct PackageReading {
         draft.name = [gemini?.name, product?.name].compactMap { $0 }.first { !$0.isEmpty } ?? ""
         draft.brand = [gemini?.brand, product?.brand].compactMap { $0 }.first { !$0.isEmpty } ?? ""
         draft.base = label.base ?? product?.facts.base ?? .grams
+        // Categoria sugerida pelo Gemini (sem Gemini fica "Outros", para escolher no editor).
+        if let category = gemini?.category { draft.category = category }
 
         // A porção do rótulo ("1 dose = 30 g") entra logo nas porções do alimento; revê-se no editor.
         var labelPortion: FoodPortion?

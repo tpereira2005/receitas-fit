@@ -7,14 +7,18 @@ enum SettingsPage: String, Hashable {
     case packageReading = "gemini"
     case tags = "etiquetas"
     case sideStore = "sidestore"
+    case trash = "apagadas"
+    case restore = "restaurar"
 }
 
 /// Página principal das Definições: um resumo da app e uma linha por área, com o estado à direita.
 /// O detalhe de cada área fica numa página própria.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Query private var recipes: [Recipe]
-    @Query private var foods: [Food]
+    @Query(filter: Recipe.notDeleted) private var recipes: [Recipe]
+    @Query(filter: Food.notDeleted) private var foods: [Food]
+    @Query(filter: #Predicate<Recipe> { $0.deletedAt != nil }) private var deletedRecipes: [Recipe]
+    @Query(filter: #Predicate<Food> { $0.deletedAt != nil }) private var deletedFoods: [Food]
     @AppStorage(TagLibrary.catalogKey) private var tagCatalog = ""
 
     /// Capturas do CI: abre logo numa das páginas.
@@ -45,6 +49,10 @@ struct SettingsView: View {
                     NavigationLink(value: SettingsPage.packageReading) {
                         SettingsRow(title: "Leitura de embalagens", symbol: "sparkles", color: .purple,
                                     value: geminiActive ? "Gemini" : "Básica")
+                    }
+                    NavigationLink(value: SettingsPage.trash) {
+                        SettingsRow(title: "Apagadas recentemente", symbol: "trash.fill", color: .red,
+                                    value: deletedCount == 0 ? "Vazia" : "\(deletedCount)")
                     }
                 }
 
@@ -83,6 +91,8 @@ struct SettingsView: View {
                 case .packageReading: PackageReadingSettingsView()
                 case .tags: TagManagerView()
                 case .sideStore: SideStoreSettingsView()
+                case .trash: RecentlyDeletedView()
+                case .restore: AutoBackupRestoreView()
                 }
             }
             // Ao voltar da página da leitura de embalagens, a chave pode ter mudado.
@@ -131,6 +141,8 @@ struct SettingsView: View {
         parts.append(foods.count == 1 ? "1 alimento" : "\(foods.count) alimentos")
         return parts.joined(separator: " · ")
     }
+
+    private var deletedCount: Int { deletedRecipes.count + deletedFoods.count }
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

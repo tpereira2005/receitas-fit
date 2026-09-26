@@ -96,8 +96,9 @@ final class AutoBackup {
 
         let payload: (data: Data, hash: String)
         do {
-            let recipes = try context.fetch(FetchDescriptor<Recipe>())
-            let foods = try context.fetch(FetchDescriptor<Food>())
+            // As apagadas (ainda em "Apagadas recentemente") não entram na cópia.
+            let recipes = try context.fetch(FetchDescriptor<Recipe>(predicate: Recipe.notDeleted))
+            let foods = try context.fetch(FetchDescriptor<Food>(predicate: Food.notDeleted))
             payload = try RecipeBackup.encodeWithFingerprint(recipes: recipes, foods: foods)
         } catch {
             setError("Não foi possível preparar a cópia: \(error.localizedDescription)")
@@ -182,6 +183,86 @@ final class AutoBackup {
         for old in backups.dropFirst(keepCount) {
             try? FileManager.default.removeItem(at: old)
         }
+    }
+
+    // MARK: - Restaurar
+
+    /// Uma cópia automática guardada na pasta.
+    nonisolated struct StoredBackup: Identifiable, Hashable, Sendable {
+        let name: String
+        let date: Date
+        let size: Int
+        var id: String { name }
+    }
+
+    /// As cópias automáticas que estão na pasta, da mais recente para a mais antiga.
+    func storedBackups() async -> Result<[StoredBackup], WriteError> {
+        if previewEnabled {
+            // Capturas do CI: três cópias de exemplo.
+            return .success((0..<3).map { day in
+                let date = Date.now.addingTimeInterval(TimeInterval(-day * 86_400 - 7_200))
+                return StoredBackup(name: Self.filePrefix + Self.stamp(date) + ".json", date: date, size: 12_400_000 - day * 150_000)
+            })
+        }
+        guard let bookmark = defaults.data(forKey: Keys.bookmark) else { return .success([]) }
+        return await Task.detached(priority: .userInitiated) {
+            Self.accessFolder(bookmark) { folder in
+                let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
+                let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)
+                return files
+                    .filter { $0.lastPathComponent.hasPrefix(filePrefix) && $0.pathExtension == "json" }
+                    .map { url in
+                        let values = try? url.resourceValues(forKeys: Set(keys))
+                        let stamp = url.deletingPathExtension().lastPathComponent.dropFirst(filePrefix.count)
+                        let date = Self.date(fromStamp: String(stamp)) ?? values?.contentModificationDate ?? .distantPast
+                        return StoredBackup(name: url.lastPathComponent, date: date, size: values?.fileSize ?? 0)
+                    }
+                    .sorted { $0.date > $1.date }
+            }
+        }.value
+    }
+
+    /// Lê uma das cópias automáticas (para a importar).
+    func readBackup(_ backup: StoredBackup) async -> Result<Data, WriteError> {
+        guard let bookmark = defaults.data(forKey: Keys.bookmark) else {
+            return .failure(WriteError(message: "Escolhe primeiro a pasta das cópias."))
+        }
+        let name = backup.name
+        return await Task.detached(priority: .userInitiated) {
+            Self.accessFolder(bookmark) { folder in
+                var coordinationError: NSError?
+                var result: Result<Data, Error> = .failure(CocoaError(.fileReadUnknown))
+                NSFileCoordinator().coordinate(readingItemAt: folder.appending(path: name), options: [], error: &coordinationError) { url in
+                    result = Result { try Data(contentsOf: url) }
+                }
+                if let coordinationError { throw coordinationError }
+                return try result.get()
+            }
+        }.value
+    }
+
+    /// Abre a pasta guardada, corre `body` e fecha o acesso.
+    nonisolated private static func accessFolder<T>(_ bookmark: Data, _ body: (URL) throws -> T) -> Result<T, WriteError> {
+        var isStale = false
+        guard let folder = try? URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &isStale) else {
+            return .failure(WriteError(message: "Já não é possível aceder à pasta escolhida. Escolhe-a outra vez."))
+        }
+        guard folder.startAccessingSecurityScopedResource() else {
+            return .failure(WriteError(message: "Sem permissão para abrir a pasta escolhida. Escolhe-a outra vez."))
+        }
+        defer { folder.stopAccessingSecurityScopedResource() }
+        do {
+            return .success(try body(folder))
+        } catch {
+            return .failure(WriteError(message: "Não foi possível ler a pasta: \(error.localizedDescription)"))
+        }
+    }
+
+    nonisolated static func date(fromStamp stamp: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd-HHmm"
+        return formatter.date(from: stamp)
     }
 
     nonisolated static func stamp(_ date: Date) -> String {

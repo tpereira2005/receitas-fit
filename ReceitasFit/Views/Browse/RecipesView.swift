@@ -3,7 +3,7 @@ import SwiftData
 
 /// Separador Receitas: todas as receitas, com categorias, filtros combinados e ordenação.
 struct RecipesView: View {
-    @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
+    @Query(filter: Recipe.notDeleted, sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
     @AppStorage("homeSort") private var sort: RecipeSort = .newest
     /// Não são guardados: voltam ao início sempre que a app abre.
     @State private var category: RecipeCategory?

@@ -30,9 +30,23 @@ struct RecipeBackup: Codable {
         decoder.dateDecodingStrategy = .iso8601
         let backup = try decoder.decode(RecipeBackup.self, from: data)
 
-        let existingFoods = Set(((try? context.fetch(FetchDescriptor<Food>())) ?? []).map(\.id))
-        let existingRecipes = Set(((try? context.fetch(FetchDescriptor<Recipe>())) ?? []).map(\.id))
+        let allFoods = (try? context.fetch(FetchDescriptor<Food>())) ?? []
+        let allRecipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        let existingFoods = Set(allFoods.map(\.id))
+        let existingRecipes = Set(allRecipes.map(\.id))
         var result = RestoreResult()
+
+        // O que está em "Apagadas recentemente" e vem na cópia volta a aparecer.
+        let foodIDs = Set((backup.foods ?? []).map(\.id))
+        for food in allFoods where food.deletedAt != nil && foodIDs.contains(food.id) {
+            food.restoreFromTrash()
+            result.foods += 1
+        }
+        let recipeIDs = Set(backup.recipes.map(\.id))
+        for recipe in allRecipes where recipe.deletedAt != nil && recipeIDs.contains(recipe.id) {
+            recipe.restoreFromTrash()
+            result.recipes += 1
+        }
 
         for dto in backup.foods ?? [] where !existingFoods.contains(dto.id) {
             context.insert(dto.makeFood())

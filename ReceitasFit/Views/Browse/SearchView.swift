@@ -6,8 +6,8 @@ import SwiftData
 struct SearchView: View {
     @Binding var searchText: String
 
-    @Query(sort: \Recipe.title) private var recipes: [Recipe]
-    @Query(sort: \Food.name) private var foods: [Food]
+    @Query(filter: Recipe.notDeleted, sort: \Recipe.title) private var recipes: [Recipe]
+    @Query(filter: Food.notDeleted, sort: \Food.name) private var foods: [Food]
     @State private var category: RecipeCategory?
     @State private var filters = RecipeFilterSet()
     @State private var showingFilters = false

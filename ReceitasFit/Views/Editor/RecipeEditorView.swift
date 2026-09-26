@@ -6,7 +6,7 @@ struct RecipeEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Query private var foods: [Food]
-    @Query private var allRecipes: [Recipe]
+    @Query(filter: Recipe.notDeleted) private var allRecipes: [Recipe]
 
     private let recipe: Recipe?
     private let original: RecipeDraft

@@ -167,7 +167,7 @@ struct PackageReadingTests {
 
     @Test func parsesGeminiAnswer() throws {
         let answer = """
-        {"nome": "Iogurte Grego Natural", "marca": "Marca", "base": "100g", "energia_kcal": 97,
+        {"nome": "Iogurte Grego Natural", "marca": "Marca", "categoria": "dairy", "base": "100g", "energia_kcal": 97,
          "lipidos": 0.4, "saturados": 0.1, "hidratos": 3.6, "acucares": 3.6, "fibra": 0.5, "proteina": 10,
          "sal": 0.1, "menor_que": ["fibra"], "porcao_nome": "Iogurte", "porcao_gramas": 170,
          "codigo_barras": "5601234567890", "notas": ""}
@@ -184,6 +184,7 @@ struct PackageReadingTests {
 
         let reading = PackageReading.merge(label: result.facts, product: nil, gemini: result)
         #expect(reading.draft.name == "Iogurte Grego Natural")
+        #expect(result.category == .dairy && reading.draft.category == .dairy)
         #expect(reading.draft.portions.first?.name == "iogurte")
         #expect(reading.draft.portions.first?.grams == 170)
         #expect(reading.lessThan == [.fiber])
@@ -197,6 +198,7 @@ struct PackageReadingTests {
         #expect(result.facts.base == .milliliters)
         #expect(result.facts[.fat] == nil)
         #expect(result.notes == "Tabela desfocada")
+        #expect(result.category == nil)
         #expect(result.barcode == nil)
     }
 
