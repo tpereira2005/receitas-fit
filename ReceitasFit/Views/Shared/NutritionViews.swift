@@ -301,6 +301,7 @@ struct RecipeCategoryLabel: View {
 
 struct FoodRow: View {
     let food: Food
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(spacing: 12) {
@@ -321,15 +322,24 @@ struct FoodRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                // Com texto muito grande, as calorias passam para baixo (a coluna estreita partia os números).
+                if typeSize.isAccessibilitySize {
+                    Text("\(Int(food.calories.rounded())) kcal/\(food.measureBase.short)")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                }
             }
             Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 0) {
-                Text(Int(food.calories.rounded()), format: .number)
-                    .font(.headline)
-                    .monospacedDigit()
-                Text("kcal/\(food.measureBase.short)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            if !typeSize.isAccessibilitySize {
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(Int(food.calories.rounded()), format: .number)
+                        .font(.headline)
+                        .monospacedDigit()
+                    Text("kcal/\(food.measureBase.short)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize()
             }
         }
         .contentShape(Rectangle())

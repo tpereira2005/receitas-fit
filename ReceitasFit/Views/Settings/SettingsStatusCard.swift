@@ -52,19 +52,33 @@ struct SettingsRow: View {
     let color: Color
     var value: String?
     var valueColor: Color = .secondary
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(spacing: 14) {
             SettingsIcon(symbol: symbol, color: color)
-            Text(title)
-                .lineLimit(1)
-                .layoutPriority(1)
-            Spacer(minLength: 8)
-            if let value {
-                Text(value)
-                    .foregroundStyle(valueColor)
+            if typeSize.isAccessibilitySize {
+                // Texto muito grande: o estado passa para baixo do título, em vez de o cortar.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    if let value {
+                        Text(value)
+                            .font(.subheadline)
+                            .foregroundStyle(valueColor)
+                    }
+                }
+                Spacer(minLength: 0)
+            } else {
+                Text(title)
                     .lineLimit(1)
-                    .contentTransition(.opacity)
+                    .layoutPriority(1)
+                Spacer(minLength: 8)
+                if let value {
+                    Text(value)
+                        .foregroundStyle(valueColor)
+                        .lineLimit(1)
+                        .contentTransition(.opacity)
+                }
             }
         }
         .accessibilityElement(children: .combine)

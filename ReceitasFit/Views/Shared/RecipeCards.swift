@@ -6,6 +6,7 @@ struct RecipeCard: View {
     let recipe: Recipe
     let transitionID: String
     let namespace: Namespace.ID
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -53,7 +54,7 @@ struct RecipeCard: View {
                 Text(recipe.cardFacts)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
             }
             .padding(.horizontal, 4)
         }

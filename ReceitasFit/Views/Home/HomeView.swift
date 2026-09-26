@@ -313,11 +313,14 @@ struct CompactRecipeCard: View {
     var captionPrefix = "última vez"
     let transitionID: String
     let namespace: Namespace.ID
+    /// Cresce com o texto (até 200 pt), para os títulos e legendas não ficarem com uma palavra por linha.
+    @ScaledMetric(relativeTo: .subheadline) private var scaledWidth: CGFloat = 132
+    private var width: CGFloat { min(200, max(132, scaledWidth)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Color.clear
-                .frame(width: 132, height: 132)
+                .frame(width: width, height: width)
                 .overlay { RecipePhoto(recipe: recipe, symbolSize: 30) }
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .matchedTransitionSource(id: transitionID, in: namespace)
@@ -335,7 +338,7 @@ struct CompactRecipeCard: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .frame(width: 132, alignment: .leading)
+        .frame(width: width, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption.map { "\(recipe.accessibilitySummary), \(captionPrefix) \($0)" } ?? recipe.accessibilitySummary)

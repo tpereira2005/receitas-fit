@@ -269,7 +269,6 @@ jobs:
           shot 39-inicio-congelador -screenshotWaiting YES
           shot 40-receita-espera -screenshotWaiting YES -screenshotOpenFirst YES -screenshotDetailWait YES
           shot 41-receita-ingredientes -screenshotOpenFirst YES -screenshotDetailScroll YES -screenshotDetailIngredients YES
-          shot 42-apagadas -screenshotTrash YES -screenshotSettings YES -screenshotSettingsPage apagadas
           shot 43-restaurar-copia -screenshotSettings YES -screenshotBackupState ready -screenshotSettingsPage restaurar
           shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
           shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
@@ -289,6 +288,9 @@ jobs:
           shot 16-copias-escuro -screenshotSettings YES -screenshotBackupState ready -screenshotSettingsPage copias
           shot 23-gemini-escuro -screenshotSettings YES -screenshotGeminiState on -screenshotSettingsPage gemini
           shot 34-definicoes-escuro -screenshotSettings YES -screenshotBackupState ready -screenshotGeminiState on
+          # Por último: tira uma receita e um alimento (vão para "Apagadas recentemente").
+          xcrun simctl ui "$UDID" appearance light
+          shot 42-apagadas -screenshotTrash YES -screenshotSettings YES -screenshotSettingsPage apagadas
 
       - uses: actions/upload-artifact@v5
         with:
