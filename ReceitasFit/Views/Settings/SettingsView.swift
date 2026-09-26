@@ -52,7 +52,7 @@ struct SettingsView: View {
                     }
                     NavigationLink(value: SettingsPage.trash) {
                         SettingsRow(title: "Apagadas recentemente", symbol: "trash.fill", color: .red,
-                                    value: deletedCount == 0 ? "Vazia" : "\(deletedCount)")
+                                    value: deletedCount == 0 ? nil : "\(deletedCount)")
                     }
                 }
 

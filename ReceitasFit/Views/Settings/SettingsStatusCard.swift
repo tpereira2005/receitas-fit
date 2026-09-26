@@ -69,15 +69,22 @@ struct SettingsRow: View {
                 }
                 Spacer(minLength: 0)
             } else {
-                Text(title)
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                Spacer(minLength: 8)
-                if let value {
-                    Text(value)
-                        .foregroundStyle(valueColor)
-                        .lineLimit(1)
-                        .contentTransition(.opacity)
+                // O estado só aparece se couber inteiro (nunca "Va…"); o título tem sempre prioridade.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        Text(title).lineLimit(1)
+                        Spacer(minLength: 8)
+                        if let value {
+                            Text(value)
+                                .foregroundStyle(valueColor)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                    HStack(spacing: 8) {
+                        Text(title).lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
                 }
             }
         }

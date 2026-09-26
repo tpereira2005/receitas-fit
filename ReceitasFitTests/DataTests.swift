@@ -110,7 +110,7 @@ struct DataTests {
         #expect(biscoff.waitMinutes == 1440 && biscoff.waitKind == .freezer)
         #expect(biscoff.servingNoun == "dose" && biscoff.servingsText == "1 dose")
         #expect(biscoff.notes.isEmpty)
-        #expect(cake.cookMinutes == 30 && cake.waitMinutes == 150 && cake.waitKind == .fridge)
+        #expect(cake.cookMinutes == 30 && cake.waitMinutes == 120 && cake.waitKind == .fridge)
         #expect(mine.waitMinutes == 0 && mine.servingNoun == "porção")
         // O que o utilizador já tinha preenchido fica como estava.
         #expect(custom.waitMinutes == 600)

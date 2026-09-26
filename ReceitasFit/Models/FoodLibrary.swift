@@ -138,7 +138,7 @@ enum FoodLibrary {
 
 /// Atualizações de dados entre versões da app.
 enum DataMigration {
-    static let currentVersion = 6
+    static let currentVersion = 7
 
     @MainActor
     static func migrate(_ context: ModelContext, from version: Int) {
@@ -147,6 +147,19 @@ enum DataMigration {
         if version < 4 { migrateToV4(context) }
         if version < 5 { migrateToV5(context) }
         if version < 6 { migrateToV6(context) }
+        if version < 7 { migrateToV7(context) }
+    }
+
+    /// Versão 7: o Cookie Dough Cake fica com 2 h de frigorífico, como diz a receita
+    /// (os 30 min de repouso depois do forno já são um passo, com temporizador).
+    /// Só muda se ainda estiver com os 2 h 30 postos pela versão 6.
+    @MainActor
+    static func migrateToV7(_ context: ModelContext) {
+        let recipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        for recipe in recipes where recipe.title == "Cookie Dough Cake" && recipe.waitMinutes == 150 && recipe.waitKind == .fridge {
+            recipe.waitMinutes = 120
+        }
+        try? context.save()
     }
 
     /// Versão 6 (app 1.4): tempo de espera e nome da porção nas receitas de origem.
