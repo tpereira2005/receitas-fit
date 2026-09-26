@@ -40,6 +40,7 @@ extension Recipe {
     var isInTrash: Bool { deletedAt != nil }
 
     /// Vai para "Apagadas recentemente" (a espera em curso é cancelada).
+    @MainActor
     func moveToTrash() {
         if frozenAt != nil { WaitReminder.cancel(self) }
         deletedAt = .now
