@@ -50,6 +50,7 @@ targets:
     scheme:
       testTargets:
         - ReceitasFitTests
+        - ReceitasFitUITests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit
@@ -71,3 +72,18 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit.tests
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1"
+
+  # Testes de interface: tocam nos ecrãs como um utilizador (enquadramento, filtros, Definições…).
+  ReceitasFitUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ReceitasFitUITests
+    dependencies:
+      - target: ReceitasFit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tpereira.receitasfit.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        TEST_TARGET_NAME: ReceitasFit

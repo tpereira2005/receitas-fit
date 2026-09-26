@@ -274,6 +274,14 @@ jobs:
           shot 24-enquadramento -screenshotEditFirst YES -screenshotPhotoFocus YES
           shot 25-partilhar-quadrada -screenshotOpenFirst YES -screenshotShare YES
           shot 26-partilhar-stories -screenshotOpenFirst YES -screenshotShare YES -screenshotShareFormat story
+          # Texto muito grande (acessibilidade), para ver se nada fica cortado.
+          xcrun simctl ui "$UDID" content_size accessibility-large
+          shot 44-texto-grande-inicio
+          shot 45-texto-grande-receita -screenshotOpenFirst YES
+          shot 46-texto-grande-receitas -tab recipes
+          shot 47-texto-grande-definicoes -screenshotSettings YES -screenshotBackupState ready
+          shot 48-texto-grande-alimentos -tab foods
+          xcrun simctl ui "$UDID" content_size large
           xcrun simctl ui "$UDID" appearance dark
           shot 9-inicio-escuro
           shot 10-receita-escuro -screenshotOpenFirst YES

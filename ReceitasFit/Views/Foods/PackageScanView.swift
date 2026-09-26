@@ -151,7 +151,7 @@ struct PackageScanView: View {
         var database = PartialFacts()
         database[.calories] = 405
         database[.protein] = 76
-        let gemini = GeminiReader.Result(name: "Whey Protein Baunilha", brand: "Marca", facts: label,
+        let gemini = GeminiReader.Result(name: "Whey Protein Baunilha", brand: "Marca", category: .supplements, facts: label,
                                          servingName: "dose", servingGrams: 30, barcode: nil, notes: "")
         var reading = PackageReading.merge(
             label: label,

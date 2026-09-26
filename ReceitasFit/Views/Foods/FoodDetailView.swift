@@ -224,8 +224,9 @@ struct FoodDetailView: View {
     /// Usado apenas nas capturas automáticas do CI: simula a edição do alimento para mostrar a revisão.
     private func handleScreenshotArguments() {
         if ScreenshotMode.flag("screenshotFoodPortions"), food.portions.isEmpty {
-            food.portions = [FoodPortion(name: "bife", grams: 120), FoodPortion(name: "peito inteiro", grams: 220)]
-            food.tablespoonWeight = 12
+            // Um iogurte de 120 g, como na embalagem.
+            food.portions = [FoodPortion(name: "iogurte", grams: 120)]
+            food.tablespoonWeight = 16
             try? context.save()
         }
         if ScreenshotMode.flag("screenshotEditFood"), !showingEditor {
@@ -234,8 +235,9 @@ struct FoodDetailView: View {
         guard ScreenshotMode.flag("screenshotFoodReview"), !showingReview, !usedIn.isEmpty else { return }
         var draft = FoodDraft(food: food)
         let original = draft
-        draft.facts.calories += 10
-        draft.facts.protein += 2
+        // Como uma embalagem nova com o rótulo ligeiramente diferente.
+        draft.facts.calories += 3
+        draft.facts.protein += 0.5
         draft.apply(to: food)
         try? context.save()
         reviewChanges = draft.changes(from: original)
