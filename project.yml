@@ -87,3 +87,5 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1"
         TEST_TARGET_NAME: ReceitasFit
+        # O XCTest não aceita subclasses isoladas no MainActor por omissão; os testes marcam-se um a um.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated

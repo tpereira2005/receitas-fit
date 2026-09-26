@@ -3,10 +3,10 @@ import XCTest
 /// Testes de interface: abrem a app no simulador e tocam nos ecrãs como um utilizador.
 /// Servem para apanhar erros que os testes do código não veem (uma janela que fecha sozinha,
 /// um botão que deixa de responder…). A app usa o conteúdo de origem (gelados e Cookie Dough Cake).
-@MainActor
 final class ReceitasFitUITests: XCTestCase {
     private let timeout: TimeInterval = 10
 
+    @MainActor
     private func launch(_ arguments: [String] = []) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -16,11 +16,13 @@ final class ReceitasFitUITests: XCTestCase {
         return app
     }
 
+    @MainActor
     private func element(_ query: XCUIElementQuery, startingWith text: String) -> XCUIElement {
         query.matching(NSPredicate(format: "label BEGINSWITH %@", text)).firstMatch
     }
 
     /// Faz scroll até o elemento aparecer (as páginas das receitas são compridas).
+    @MainActor
     private func scrollTo(_ element: XCUIElement, in app: XCUIApplication, attempts: Int = 8) {
         var remaining = attempts
         while !element.isHittable && remaining > 0 {
@@ -30,6 +32,7 @@ final class ReceitasFitUITests: XCTestCase {
     }
 
     /// O erro da versão 1.3: "Ajustar enquadramento" fechava o editor inteiro.
+    @MainActor
     func testPhotoFocusEditorKeepsTheRecipeEditorOpen() {
         let app = launch(["-screenshotEditFirst", "YES"])
         XCTAssertTrue(app.navigationBars["Editar receita"].waitForExistence(timeout: timeout))
@@ -49,6 +52,7 @@ final class ReceitasFitUITests: XCTestCase {
         XCTAssertFalse(app.navigationBars["Enquadramento"].exists)
     }
 
+    @MainActor
     func testFilterPanelAppliesAndShowsTheFilter() {
         let app = launch(["-tab", "recipes"])
         let filters = app.buttons["Filtros"]
@@ -63,6 +67,7 @@ final class ReceitasFitUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Remover filtro Até 400 kcal"].waitForExistence(timeout: timeout))
     }
 
+    @MainActor
     func testSettingsPagesOpenAndGoBack() {
         let app = launch()
         let settings = app.buttons["Definições"]
@@ -79,6 +84,7 @@ final class ReceitasFitUITests: XCTestCase {
         }
     }
 
+    @MainActor
     func testCookingModeMovesBetweenSteps() {
         let app = launch(["-screenshotOpenFirst", "YES"])
         let cook = element(app.buttons, startingWith: "Modo cozinhar")
@@ -94,6 +100,7 @@ final class ReceitasFitUITests: XCTestCase {
     }
 
     /// Apagar uma receita manda-a para "Apagadas recentemente", de onde se recupera.
+    @MainActor
     func testDeletedRecipeCanBeRestored() {
         let app = launch(["-screenshotOpenFirst", "YES"])
         let more = app.buttons["Mais"]
