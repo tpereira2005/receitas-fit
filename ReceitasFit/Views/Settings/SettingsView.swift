@@ -121,10 +121,15 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Receitas")
                     .font(.title2.weight(.bold))
-                Text(summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Numa só linha: primeiro tal como está, depois com letra um pouco menor e,
+                // se ainda não couber, com "fav." (só com texto muito grande passa a duas linhas).
+                ViewThatFits(in: .horizontal) {
+                    Text(summary).font(.subheadline).lineLimit(1)
+                    Text(summary).font(.footnote).lineLimit(1)
+                    Text(summary(short: true)).font(.footnote).lineLimit(1)
+                    Text(summary).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(.secondary)
                 Text("Versão \(appVersion)")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -134,10 +139,14 @@ struct SettingsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var summary: String {
+    private var summary: String { summary(short: false) }
+
+    private func summary(short: Bool) -> String {
         let favorites = recipes.filter(\.isFavorite).count
         var parts = [Format.recipes(recipes.count)]
-        if favorites > 0 { parts.append(favorites == 1 ? "1 favorita" : "\(favorites) favoritas") }
+        if favorites > 0 {
+            parts.append(short ? "\(favorites) fav." : favorites == 1 ? "1 favorita" : "\(favorites) favoritas")
+        }
         parts.append(foods.count == 1 ? "1 alimento" : "\(foods.count) alimentos")
         return parts.joined(separator: " · ")
     }
