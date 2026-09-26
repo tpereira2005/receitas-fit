@@ -42,7 +42,7 @@ struct RecipesView: View {
                 RecipeEditorView()
             }
             .sheet(isPresented: $showingFilters) {
-                RecipeFilterPanel(filters: $filters, recipes: recipes)
+                RecipeFilterPanel(filters: $filters, recipes: recipes.filter { category == nil || $0.category == category })
             }
         }
     }
@@ -50,10 +50,10 @@ struct RecipesView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                CategoryChips(selection: $category)
+                CategoryChips(selection: $category, recipes: recipes)
 
                 if !filters.isEmpty {
-                    activeFilters
+                    ActiveFilterChips(filters: $filters)
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
@@ -85,49 +85,10 @@ struct RecipesView: View {
         .animation(.snappy, value: filters)
     }
 
-    /// Filtros ativos, cada um com um toque para o remover.
-    private var activeFilters: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(filters.chips) { chip in
-                    Button {
-                        withAnimation(.snappy) { filters.remove(chip.remove) }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(chip.title)
-                            Image(systemName: "xmark").font(.caption2.weight(.bold))
-                        }
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 6)
-                        .background(Color.accentColor.opacity(0.15), in: .capsule)
-                        .foregroundStyle(Color.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remover filtro \(chip.title)")
-                }
-                Button("Limpar tudo") {
-                    withAnimation(.snappy) { filters = RecipeFilterSet() }
-                }
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-            }
-        }
-        .contentMargins(.horizontal, 16, for: .scrollContent)
-        .scrollClipDisabled()
-    }
-
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button {
-                showingFilters = true
-            } label: {
-                Label("Filtros", systemImage: filters.isEmpty
-                      ? "line.3.horizontal.decrease"
-                      : "line.3.horizontal.decrease.circle.fill")
-            }
-            .badge(filters.activeCount)
+            FilterToolbarButton(filters: filters) { showingFilters = true }
             Menu {
                 Picker("Ordenar por", selection: $sort) {
                     ForEach(RecipeSort.allCases) { option in

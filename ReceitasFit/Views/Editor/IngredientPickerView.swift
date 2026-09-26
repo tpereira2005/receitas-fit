@@ -201,9 +201,12 @@ struct IngredientQuantityView: View {
                     FoodIcon(food: food, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(food.name).font(.headline)
-                        Text("\(Int(food.calories.rounded())) kcal · \(food.macroSummary) por \(food.measureBase.short)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            Text("\(Int(food.calories.rounded())) kcal/\(food.measureBase.short)")
+                            MacroDots(facts: food.per100)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.vertical, 4)

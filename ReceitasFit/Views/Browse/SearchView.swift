@@ -1,19 +1,22 @@
 import SwiftUI
 import SwiftData
 
-/// Pesquisa de receitas e alimentos, com filtros rápidos e pesquisas recentes.
+/// Pesquisa de receitas e alimentos, com as mesmas categorias e filtros do separador Receitas.
 /// Os resultados vêm por relevância: primeiro o que tem a palavra no título.
 struct SearchView: View {
     @Binding var searchText: String
 
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
     @Query(sort: \Food.name) private var foods: [Food]
-    @State private var filters: Set<QuickFilter> = []
+    @State private var category: RecipeCategory?
+    @State private var filters = RecipeFilterSet()
+    @State private var showingFilters = false
     @State private var recent = RecentSearches.all
     @Namespace private var namespace
 
     private var query: String { searchText.trimmed }
-    private var isIdle: Bool { query.isEmpty && filters.isEmpty }
+    private var isFiltering: Bool { category != nil || !filters.isEmpty }
+    private var isIdle: Bool { query.isEmpty && !isFiltering }
 
     private struct Scored {
         let recipe: Recipe
@@ -22,7 +25,7 @@ struct SearchView: View {
 
     private var recipeResults: [Recipe] {
         var scored: [Scored] = []
-        for recipe in recipes where filters.allSatisfy({ $0.matches(recipe) }) {
+        for recipe in recipes where (category == nil || recipe.category == category) && filters.matches(recipe) {
             if let score = recipe.searchScore(query) {
                 scored.append(Scored(recipe: recipe, score: score))
             }
@@ -35,7 +38,7 @@ struct SearchView: View {
     }
 
     private var foodResults: [Food] {
-        guard !query.isEmpty, filters.isEmpty else { return [] }
+        guard !query.isEmpty, !isFiltering else { return [] }
         return foods.filter { $0.matches(query: query) }
     }
 
@@ -47,7 +50,12 @@ struct SearchView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    filterChips
+                    VStack(alignment: .leading, spacing: 12) {
+                        CategoryChips(selection: $category, recipes: recipes)
+                        if !filters.isEmpty {
+                            ActiveFilterChips(filters: $filters)
+                        }
+                    }
 
                     if isIdle {
                         idleContent
@@ -64,6 +72,16 @@ struct SearchView: View {
             .navigationTitle("Pesquisar")
             .searchable(text: $searchText, prompt: "Receitas, alimentos, etiquetas…")
             .onSubmit(of: .search) { remember(query) }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    FilterToolbarButton(filters: filters) { showingFilters = true }
+                }
+            }
+            .sheet(isPresented: $showingFilters) {
+                RecipeFilterPanel(filters: $filters, recipes: recipes.filter { category == nil || $0.category == category })
+            }
+            .animation(.snappy, value: filters)
+            .animation(.snappy, value: category)
             .navigationDestination(for: Food.self) { food in
                 FoodDetailView(food: food, namespace: namespace)
             }
@@ -110,35 +128,6 @@ struct SearchView: View {
         guard !text.isEmpty else { return }
         RecentSearches.add(text)
         recent = RecentSearches.all
-    }
-
-    // MARK: - Filtros rápidos
-
-    private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    ForEach(QuickFilter.allCases) { filter in
-                        let isOn = filters.contains(filter)
-                        Button {
-                            withAnimation(.snappy) {
-                                if isOn { filters.remove(filter) } else { filters.insert(filter) }
-                            }
-                        } label: {
-                            Label(filter.title, systemImage: filter.symbol)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(isOn ? Color.white : Color.primary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 9)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(isOn ? .regular.tint(filter.color).interactive() : .regular.interactive(), in: .capsule)
-                    }
-                }
-            }
-        }
-        .contentMargins(.horizontal, 16, for: .scrollContent)
-        .scrollClipDisabled()
     }
 
     // MARK: - Sem pesquisa
@@ -220,11 +209,7 @@ struct SearchView: View {
                 SectionHeader(title: "Todas de A a Z", trailing: Format.recipes(recipes.count))
                 LazyVStack(spacing: 0) {
                     ForEach(recipes) { recipe in
-                        NavigationLink(value: RecipeRoute(recipe: recipe, source: "list")) {
-                            RecipeRow(recipe: recipe)
-                                .padding(.vertical, 8)
-                        }
-                        .buttonStyle(.plain)
+                        RecipeListItem(recipe: recipe)
                         if recipe.id != recipes.last?.id {
                             Divider().padding(.leading, 74)
                         }

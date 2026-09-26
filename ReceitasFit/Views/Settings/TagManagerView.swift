@@ -49,7 +49,7 @@ struct TagManagerView: View {
                 }
             } footer: {
                 if !tags.isEmpty {
-                    Text("Toca numa etiqueta para lhe mudar o nome. Se escreveres o nome de outra que já existe, as duas juntam-se numa só. Apagar tira a etiqueta das receitas, mas não apaga as receitas.")
+                    Text("Toca para mudar o nome (com o nome de outra, juntam-se). Apagar não apaga as receitas.")
                 }
             }
         }

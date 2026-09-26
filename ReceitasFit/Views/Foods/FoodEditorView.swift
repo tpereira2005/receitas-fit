@@ -81,8 +81,7 @@ struct FoodEditorView: View {
                     }
                 }
 
-                imageSection
-
+                // O que se preenche sempre (os valores do rótulo) vem primeiro; medidas, porções e imagem são opcionais.
                 Section {
                     Picker("Valores", selection: $draft.base) {
                         ForEach(MeasureBase.allCases) { base in
@@ -90,21 +89,6 @@ struct FoodEditorView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    OptionalDecimalFieldRow(title: "Peso de 1 unidade", unit: draft.base.rawValue, value: $draft.unitWeight)
-                    OptionalDecimalFieldRow(title: "Colher de sopa", unit: draft.base.rawValue, value: $draft.tablespoonWeight,
-                                            placeholder: IngredientUnit.defaultTablespoon.cleanString)
-                    OptionalDecimalFieldRow(title: "Colher de chá", unit: draft.base.rawValue, value: $draft.teaspoonWeight,
-                                            placeholder: IngredientUnit.defaultTeaspoon.cleanString)
-                } header: {
-                    Text("Medidas")
-                } footer: {
-                    Text("Tudo opcional. O peso de uma unidade (p. ex. 1 ovo ≈ 60 g) permite usar unidades nas receitas. As colheres valem \(IngredientUnit.defaultTablespoon.cleanString) e \(IngredientUnit.defaultTeaspoon.cleanString) \(draft.base.rawValue) se não indicares outro peso (p. ex. 1 colher de sopa de azeite ≈ 13 g).")
-                }
-                .id("measures")
-
-                portionsSection
-
-                Section {
                     DecimalFieldRow(title: "Energia", unit: "kcal", value: $draft.facts.calories)
                     DecimalFieldRow(title: "Lípidos", unit: "g", value: $draft.facts.fat)
                     DecimalFieldRow(title: "dos quais saturados", unit: "g", value: $draft.facts.saturatedFat, indented: true)
@@ -114,10 +98,10 @@ struct FoodEditorView: View {
                     DecimalFieldRow(title: "Proteína", unit: "g", value: $draft.facts.protein)
                     DecimalFieldRow(title: "Sal", unit: "g", value: $draft.facts.salt)
                 } header: {
-                    Text("Informação nutricional · \(draft.base.title.lowercased())")
+                    Text("Informação nutricional")
                 } footer: {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Copia os valores do rótulo, pela mesma ordem.")
+                        Text("Os valores do rótulo, pela mesma ordem.")
                         ForEach(warnings, id: \.self) { warning in
                             Label(warning, systemImage: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
@@ -131,6 +115,23 @@ struct FoodEditorView: View {
                         }
                     }
                 }
+
+                Section {
+                    OptionalDecimalFieldRow(title: "Peso de 1 unidade", unit: draft.base.rawValue, value: $draft.unitWeight)
+                    OptionalDecimalFieldRow(title: "Colher de sopa", unit: draft.base.rawValue, value: $draft.tablespoonWeight,
+                                            placeholder: IngredientUnit.defaultTablespoon.cleanString)
+                    OptionalDecimalFieldRow(title: "Colher de chá", unit: draft.base.rawValue, value: $draft.teaspoonWeight,
+                                            placeholder: IngredientUnit.defaultTeaspoon.cleanString)
+                } header: {
+                    Text("Medidas · opcional")
+                } footer: {
+                    Text("Para usar unidades e colheres nas receitas (p. ex. 1 ovo ≈ 60 g).")
+                }
+                .id("measures")
+
+                portionsSection
+
+                imageSection
             }
             .task {
                 // Usado apenas nas capturas automáticas do CI.
@@ -273,7 +274,7 @@ struct FoodEditorView: View {
         } header: {
             Text("Leitura da embalagem")
         } footer: {
-            Text("Confirma cada valor com a embalagem. Nada fica guardado até tocares em Guardar; as fotografias e o código de barras não são guardados na app.")
+            Text("Confirma os valores com a embalagem. As fotografias e o código de barras não ficam guardados.")
         }
     }
 
@@ -344,9 +345,9 @@ struct FoodEditorView: View {
                 Label("Adicionar porção", systemImage: "plus.circle.fill")
             }
         } header: {
-            Text("Porções")
+            Text("Porções · opcional")
         } footer: {
-            Text("Dá nome às porções que usas muitas vezes, no singular: “scoop” = 30 g, “fatia” = 25 g, “iogurte” = 120 g. Nas receitas passas a poder escrever “2 scoops”.")
+            Text("No singular, p. ex. “scoop” = 30 g. Nas receitas escreves “2 scoops”.")
         }
     }
 
@@ -379,9 +380,9 @@ struct FoodEditorView: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("Imagem")
+            Text("Imagem · opcional")
         } footer: {
-            Text("Opcional. Usa uma imagem quadrada, de preferência em PNG com fundo transparente. Quando existe, substitui o ícone da categoria.")
+            Text("Quadrada, de preferência em PNG com fundo transparente.")
         }
     }
 

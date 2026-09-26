@@ -123,11 +123,7 @@ struct FoodDetailView: View {
                     } else {
                         VStack(spacing: 0) {
                             ForEach(usedIn) { recipe in
-                                NavigationLink(value: RecipeRoute(recipe: recipe, source: "food")) {
-                                    RecipeRow(recipe: recipe)
-                                        .padding(.vertical, 8)
-                                }
-                                .buttonStyle(.plain)
+                                RecipeListItem(recipe: recipe, source: "food")
                                 if recipe.id != usedIn.last?.id {
                                     Divider().padding(.leading, 74)
                                 }

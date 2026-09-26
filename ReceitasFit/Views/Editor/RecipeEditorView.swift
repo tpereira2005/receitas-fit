@@ -280,7 +280,7 @@ struct RecipeEditorView: View {
         } header: {
             Text("Tempo e porções")
         } footer: {
-            Text("A espera (congelar, frigorífico, repousar) não conta para as receitas rápidas.")
+            Text("A espera não conta como tempo de preparação.")
         }
         .animation(.snappy, value: draft.waitMinutes > 0)
     }
@@ -321,7 +321,7 @@ struct RecipeEditorView: View {
         } header: {
             Text("Ingredientes")
         } footer: {
-            Text("Escolhe os ingredientes da biblioteca de alimentos e indica a quantidade total usada na receita. Toca num ingrediente para o alterar; arrasta para reordenar e desliza para apagar.")
+            Text("Quantidades para a receita toda. Toca para alterar, desliza para apagar.")
         }
     }
 
@@ -349,7 +349,7 @@ struct RecipeEditorView: View {
             Text("Nutrição · calculada automaticamente")
         } footer: {
             if usesLegacy {
-                Text("Estes valores foram introduzidos à mão numa versão anterior. Liga os ingredientes à biblioteca para passarem a ser calculados automaticamente.")
+                Text("Valores introduzidos à mão. Escolhe os ingredientes da biblioteca para serem calculados.")
             } else if summary.unresolved > 0 {
                 Label(
                     summary.unresolved == 1

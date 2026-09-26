@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 
 /// Separador Início: um resumo para chegar depressa ao que interessa.
-/// Recentes, feitas recentemente, favoritas, categorias, coleções e etiquetas.
+/// Recentes, à espera (congelador…), favoritas, feitas recentemente e etiquetas.
+/// As categorias e as coleções ficam no separador Receitas.
 struct HomeView: View {
     @Query(sort: \Recipe.createdAt, order: .reverse) private var recipes: [Recipe]
     @Environment(\.modelContext) private var context
@@ -12,8 +13,6 @@ struct HomeView: View {
     @State private var showingSettings = false
     @Namespace private var namespace
     private let router = AppRouter.shared
-
-    private let tileColumns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     private var recentlyCooked: [Recipe] {
         let cooked = recipes.filter { $0.lastCookedAt != nil }
@@ -25,6 +24,15 @@ struct HomeView: View {
     }
 
     private var tags: [(tag: String, count: Int)] { TagLibrary.counts(in: recipes) }
+
+    /// Receitas dos cartões grandes de "Recentes".
+    private var recent: [Recipe] { Array(recipes.prefix(6)) }
+
+    /// "Favoritas" não aparece se só repetir receitas que já estão em "Recentes".
+    private var showsFavorites: Bool {
+        let shown = Set(recent.map(\.id))
+        return favorites.contains { !shown.contains($0.id) }
+    }
 
     /// Receitas à espera (no congelador, frigorífico…), as que ficam prontas primeiro à frente.
     private var waiting: [Recipe] {
@@ -95,42 +103,12 @@ struct HomeView: View {
                     waitingSection
                 }
 
-                if !recentlyCooked.isEmpty {
-                    carousel(title: "Feitas recentemente", recipes: recentlyCooked, source: "cooked", showsCookedDate: true)
-                }
-
-                if !favorites.isEmpty {
+                if showsFavorites {
                     carousel(title: "Favoritas", recipes: favorites, source: "favorites", seeAll: .quick(.favorites))
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionHeader(title: "Categorias")
-                    LazyVGrid(columns: tileColumns, spacing: 14) {
-                        ForEach(RecipeCategory.allCases) { category in
-                            NavigationLink(value: RecipeFilter.category(category)) {
-                                CategoryTile(category: category, count: recipes.filter { $0.category == category }.count)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionHeader(title: "Coleções inteligentes")
-                    VStack(spacing: 0) {
-                        ForEach(QuickFilter.allCases) { filter in
-                            NavigationLink(value: RecipeFilter.quick(filter)) {
-                                SmartCollectionRow(filter: filter, count: recipes.filter { filter.matches($0) }.count)
-                            }
-                            .buttonStyle(.plain)
-                            if filter != QuickFilter.allCases.last {
-                                Divider().padding(.leading, 62)
-                            }
-                        }
-                    }
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .padding(.horizontal)
+                if !recentlyCooked.isEmpty {
+                    carousel(title: "Feitas recentemente", recipes: recentlyCooked, source: "cooked", showsCookedDate: true)
                 }
 
                 if !tags.isEmpty {
@@ -195,7 +173,7 @@ struct HomeView: View {
             SectionHeader(title: "Recentes")
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 14) {
-                    ForEach(recipes.prefix(6)) { recipe in
+                    ForEach(recent) { recipe in
                         let route = RecipeRoute(recipe: recipe, source: "featured")
                         NavigationLink(value: route) {
                             FeaturedRecipeCard(recipe: recipe, transitionID: route.transitionID, namespace: namespace)
@@ -357,15 +335,22 @@ struct CompactRecipeCard: View {
     }
 }
 
+/// Cápsulas das categorias (Receitas e Pesquisa). Só aparecem as categorias com receitas.
 struct CategoryChips: View {
     @Binding var selection: RecipeCategory?
+    let recipes: [Recipe]
+
+    private var categories: [RecipeCategory] {
+        let used = Set(recipes.map(\.category))
+        return RecipeCategory.allCases.filter { used.contains($0) || $0 == selection }
+    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     chip(title: "Todas", icon: GlyphImage(image: Image(systemName: "square.stack.fill"), isAsset: false), value: nil)
-                    ForEach(RecipeCategory.allCases) { category in
+                    ForEach(categories) { category in
                         chip(title: category.title, icon: GlyphImage(image: category.glyph, isAsset: category.assetName != nil), value: category)
                     }
                 }

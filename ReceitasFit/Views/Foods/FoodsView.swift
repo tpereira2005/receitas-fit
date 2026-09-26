@@ -40,9 +40,14 @@ struct FoodsView: View {
             .navigationTitle("Alimentos")
             .searchable(text: $searchText, prompt: "Procurar alimento")
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Ler embalagem", systemImage: "barcode.viewfinder") { showingScanner = true }
-                    Button("Novo alimento", systemImage: "plus") { showingEditor = true }
+                ToolbarItem(placement: .topBarTrailing) {
+                    // Um só "+", com as duas formas de criar um alimento (o código de barras sozinho não dizia o que fazia).
+                    Menu {
+                        Button("Novo alimento", systemImage: "square.and.pencil") { showingEditor = true }
+                        Button("Ler embalagem", systemImage: "camera.viewfinder") { showingScanner = true }
+                    } label: {
+                        Label("Adicionar alimento", systemImage: "plus")
+                    }
                 }
             }
             .sheet(isPresented: $showingScanner) {

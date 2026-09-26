@@ -182,7 +182,7 @@ struct SideStoreSettingsView: View {
                     }
                     Button("Abrir SideStore", systemImage: "arrow.up.forward.app") { AppSigning.openSideStore() }
                 } footer: {
-                    Text("Com uma conta gratuita, a app tem de ser renovada a cada 7 dias. Se expirar, deixa de abrir até a renovares, mas as receitas continuam guardadas.")
+                    Text("Com uma conta gratuita, renova a cada 7 dias. Se expirar, as receitas ficam guardadas.")
                 }
             }
         }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Painel de filtros combinados do separador Receitas.
+/// Painel de filtros combinados (Receitas e Pesquisa). As categorias ficam nas cápsulas por cima da lista.
 /// Mostra ao vivo quantas receitas ficam; os filtros não são guardados entre utilizações.
 struct RecipeFilterPanel: View {
     @Environment(\.dismiss) private var dismiss
@@ -23,22 +23,6 @@ struct RecipeFilterPanel: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Categorias") {
-                    FlowLayout(spacing: 8) {
-                        ForEach(RecipeCategory.allCases) { category in
-                            toggleChip(
-                                title: category.title,
-                                icon: GlyphImage(image: category.glyph, isAsset: category.assetName != nil),
-                                color: category.color,
-                                isOn: draft.categories.contains(category)
-                            ) {
-                                draft.categories.formSymmetricDifference([category])
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
                 Section("Coleções") {
                     ForEach(QuickFilter.allCases) { filter in
                         Toggle(isOn: Binding(
@@ -166,5 +150,56 @@ struct RecipeFilterPanel: View {
                 .fixedSize()
         }
         .buttonStyle(.borderless)
+    }
+}
+
+/// Filtros ativos por baixo das categorias, cada um com um toque para o remover.
+struct ActiveFilterChips: View {
+    @Binding var filters: RecipeFilterSet
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(filters.chips) { chip in
+                    Button {
+                        withAnimation(.snappy) { filters.remove(chip.remove) }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(chip.title)
+                            Image(systemName: "xmark").font(.caption2.weight(.bold))
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.15), in: .capsule)
+                        .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remover filtro \(chip.title)")
+                }
+                Button("Limpar tudo") {
+                    withAnimation(.snappy) { filters = RecipeFilterSet() }
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+            }
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .scrollClipDisabled()
+    }
+}
+
+/// Botão dos filtros na barra, com o número de filtros ativos.
+struct FilterToolbarButton: View {
+    let filters: RecipeFilterSet
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Filtros", systemImage: filters.isEmpty
+                  ? "line.3.horizontal.decrease"
+                  : "line.3.horizontal.decrease.circle.fill")
+        }
+        .badge(filters.activeCount)
     }
 }

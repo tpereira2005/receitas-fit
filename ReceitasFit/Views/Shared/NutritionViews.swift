@@ -309,10 +309,15 @@ struct FoodRow: View {
                 Text(food.name)
                     .font(.body.weight(.medium))
                     .lineLimit(2)
-                Text(food.brand.isEmpty ? food.macroSummary : "\(food.brand) · \(food.macroSummary)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 8) {
+                    if !food.brand.isEmpty {
+                        Text(food.brand)
+                            .lineLimit(1)
+                    }
+                    MacroDots(facts: food.per100)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 0) {
@@ -325,5 +330,28 @@ struct FoodRow: View {
             }
         }
         .contentShape(Rectangle())
+    }
+}
+
+/// Macros em pontos coloridos (as mesmas cores da app): proteína, hidratos e gordura.
+struct MacroDots: View {
+    let facts: NutritionFacts
+
+    var body: some View {
+        HStack(spacing: 8) {
+            dot(facts.protein, color: .pink)
+            dot(facts.carbs, color: .orange)
+            dot(facts.fat, color: .teal)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Proteína \(facts.protein.cleanString) gramas, hidratos \(facts.carbs.cleanString), gordura \(facts.fat.cleanString)")
+    }
+
+    private func dot(_ value: Double, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(value.cleanString).monospacedDigit()
+        }
     }
 }

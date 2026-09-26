@@ -21,9 +21,11 @@ struct RecipeShareView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
 
+                // A quadrada ocupa a largura toda (antes ficava pequena no meio do espaço livre).
                 preview
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, format == .square ? 8 : 24)
+                    .padding(.vertical, format == .square ? 12 : 0)
 
                 VStack(spacing: 10) {
                     if let image = images[format] {
