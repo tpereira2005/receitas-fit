@@ -1,0 +1,81 @@
+{
+  "name": "Receitas",
+  "identifier": "com.tpereira.receitasfit.source",
+  "subtitle": "Atualizações da app Receitas",
+  "description": "App pessoal para guardar e organizar receitas fit e saudáveis: biblioteca de alimentos com leitura de embalagens, calorias e macros calculados sozinhos, modo cozinhar com temporizadores, lembrete do congelador e cópias de segurança automáticas, com o design Liquid Glass do iOS.",
+  "iconURL": "https://raw.githubusercontent.com/tpereira2005/receitas/sidestore/AppIcon.png",
+  "website": "https://github.com/tpereira2005/receitas",
+  "tintColor": "#10B062",
+  "apps": [
+    {
+      "name": "Receitas",
+      "bundleIdentifier": "com.tpereira.receitasfit",
+      "developerName": "tpereira2005",
+      "subtitle": "Receitas fit com macros automáticos",
+      "localizedDescription": "App pessoal para guardar e organizar receitas fit e saudáveis: biblioteca de alimentos com leitura de embalagens, calorias e macros calculados sozinhos, modo cozinhar com temporizadores, lembrete do congelador e cópias de segurança automáticas, com o design Liquid Glass do iOS.",
+      "iconURL": "https://raw.githubusercontent.com/tpereira2005/receitas/sidestore/AppIcon.png",
+      "tintColor": "#10B062",
+      "category": "lifestyle",
+      "screenshots": [
+        "https://github.com/tpereira2005/receitas/releases/download/latest/1-inicio.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/2-receita.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/38-modo-cozinhar.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/39-inicio-congelador.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/8-receitas.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/4-alimentos.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/33-definicoes.png"
+      ],
+      "versions": [
+        {
+          "version": "1.4.65",
+          "buildVersion": "65",
+          "date": "2026-09-26T12:51:49Z",
+          "localizedDescription": "Repositório \"receitas\": nome, documentação, licença e compilação\n\n- A app passa a chamar-se só \"Receitas\" no projeto (alvos, pastas, testes\n  e Receitas.ipa). O identificador com.tpereira.receitasfit e o Porta-chaves\n  não mudam: os dados e a chave do Gemini ficam.\n- README novo (funcionalidades da 1.4, capturas atuais, instalação,\n  compilação e estrutura) e pasta docs/ (arquitetura, conteúdo de origem,\n  imagens com o Codex e histórico das versões).\n- Licença: todos os direitos reservados.\n- Kit do Codex em ferramentas/fotos-receitas (sem fotografias).\n- Compilação: notas das versões sem \"Co-Authored-By\", ficheiros de\n  compilação guardados 14 dias, limite de tempo por etapa, Dependabot e\n  .gitignore completo.\n- Fonte do SideStore com mais capturas e notícias da 1.3 e da 1.4.\n- Modelos para registar erros e ideias.",
+          "downloadURL": "https://github.com/tpereira2005/receitas/releases/download/v1.4.65/Receitas.ipa",
+          "size": 15296752,
+          "minOSVersion": "26.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "version": "1.4.65",
+      "versionDate": "2026-09-26T12:51:49Z",
+      "versionDescription": "Repositório \"receitas\": nome, documentação, licença e compilação\n\n- A app passa a chamar-se só \"Receitas\" no projeto (alvos, pastas, testes\n  e Receitas.ipa). O identificador com.tpereira.receitasfit e o Porta-chaves\n  não mudam: os dados e a chave do Gemini ficam.\n- README novo (funcionalidades da 1.4, capturas atuais, instalação,\n  compilação e estrutura) e pasta docs/ (arquitetura, conteúdo de origem,\n  imagens com o Codex e histórico das versões).\n- Licença: todos os direitos reservados.\n- Kit do Codex em ferramentas/fotos-receitas (sem fotografias).\n- Compilação: notas das versões sem \"Co-Authored-By\", ficheiros de\n  compilação guardados 14 dias, limite de tempo por etapa, Dependabot e\n  .gitignore completo.\n- Fonte do SideStore com mais capturas e notícias da 1.3 e da 1.4.\n- Modelos para registar erros e ideias.",
+      "downloadURL": "https://github.com/tpereira2005/receitas/releases/download/v1.4.65/Receitas.ipa",
+      "size": 15296752,
+      "screenshotURLs": [
+        "https://github.com/tpereira2005/receitas/releases/download/latest/1-inicio.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/2-receita.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/38-modo-cozinhar.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/39-inicio-congelador.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/8-receitas.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/4-alimentos.png",
+        "https://github.com/tpereira2005/receitas/releases/download/latest/33-definicoes.png"
+      ]
+    }
+  ],
+  "news": [
+    {
+      "title": "Receitas 1.4",
+      "identifier": "receitas-1.4",
+      "caption": "Modo cozinhar com temporizadores, lembrete do congelador, pesos e doses, enquadramento com zoom e Apagadas recentemente.",
+      "date": "2026-09-26",
+      "tintColor": "#10B062",
+      "imageURL": "https://github.com/tpereira2005/receitas/releases/download/latest/38-modo-cozinhar.png",
+      "appID": "com.tpereira.receitasfit",
+      "notify": false
+    },
+    {
+      "title": "Receitas 1.3",
+      "identifier": "receitas-1.3",
+      "caption": "Novo Início, filtros combinados, leitura de embalagens com o Gemini, porções e colheres, fotografias e cópias automáticas.",
+      "date": "2026-09-23",
+      "tintColor": "#10B062",
+      "imageURL": "https://github.com/tpereira2005/receitas/releases/download/latest/1-inicio.png",
+      "appID": "com.tpereira.receitasfit",
+      "notify": false
+    }
+  ]
+}
